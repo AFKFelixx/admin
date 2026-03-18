@@ -1,0 +1,568 @@
+/* ========== Sidebar Collapse ========== */
+.sidebar {
+    width: 320px; /* default expanded width */
+    transition: width 0.3s ease;
+}
+.sidebar.collapsed {
+    width: 80px;
+}
+.sidebar.collapsed .sidebar-text {
+    display: none;
+}
+.sidebar.collapsed .sidebar-title span {
+    display: none;
+}
+.sidebar.collapsed .sidebar-title i {
+    margin-right: 0;
+}
+.sidebar.collapsed nav a {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+.sidebar.collapsed nav a i {
+    margin-right: 0;
+    width: auto;
+}
+.sidebar.collapsed .border-t + p {
+    display: none; /* hide section headers like "Government" */
+}
+
+/* Sidebar item active state – no hover effect */
+.sidebar-item.active {
+    background-color: #2e5fa7;
+    color: white;
+}
+.sidebar-item.active i {
+    color: white;
+}
+.sidebar-item.active:hover {
+    background-color: #2e5fa7; /* keep same, no change */
+    color: white;
+}
+.sidebar-item.active i:hover {
+    color: white;
+}
+
+/* ========== Base & Utility ========== */
+.section {
+    display: none;
+}
+.section.active {
+    display: block;
+}
+.repeatable-item {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #2e5fa7;
+}
+.general-subnav {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 30;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem 0.25rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
+}
+.subnav-item {
+    padding: 0.5rem 1.2rem;
+    border-radius: 9999px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    background: #f3f4f6;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.subnav-item.active-sub {
+    background: #2e5fa7;
+    color: white;
+}
+.general-subsection {
+    display: none;
+}
+.general-subsection.active-subsection {
+    display: block;
+}
+
+/* ========== News styles ========== */
+.news-thumb-preview {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+}
+.badge-category {
+    background: #e9f0fb;
+    color: #2e5fa7;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.8rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    display: inline-block;
+}
+.video-upload-panel-inline {
+    background: #f1f5f9;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    border: 1px dashed #2e5fa7;
+    font-size: 0.85rem;
+}
+.video-upload-panel-inline input[type="file"],
+.video-upload-panel-inline input[type="url"] {
+    width: 100%;
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    background: white;
+}
+.news-tab-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+.news-tab-btn {
+    background: #f1f5f9;
+    border: none;
+    border-radius: 9999px;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.news-tab-btn.active-tab {
+    background: #2e5fa7;
+    color: white;
+}
+.category-panel {
+    display: none;
+}
+.category-panel.active-panel {
+    display: block;
+}
+.news-item-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+.article-list .news-item-card {
+    margin-bottom: 1rem;
+}
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+/* ========== User & agency items ========== */
+.user-item,
+.agency-item {
+    background: #f9fafc;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid #2e5fa7;
+    margin-bottom: 0.5rem;
+}
+.hotline-item {
+    background: #f9fafc;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ========== Officials editor ========== */
+.official-card {
+    background: #f9fafc;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border-left: 4px solid #2e5fa7;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.official-image-preview {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid #2e5fa7;
+    background: #e2e8f0;
+    margin-bottom: 0.75rem;
+}
+.official-name-input,
+.official-position-input {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    padding: 0.4rem;
+    font-size: 0.9rem;
+}
+.remove-official {
+    align-self: flex-end;
+    margin-top: 0.25rem;
+}
+
+/* ========== Profile section card ========== */
+.profile-section-card {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #2e5fa7;
+}
+.profile-section-card .section-heading {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+.profile-section-card .section-content {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-family: monospace;
+}
+.profile-section-card .section-image-preview {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    margin-top: 0.5rem;
+}
+
+/* ========== LGU Offices editor ========== */
+.lgu-office-card {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #2e5fa7;
+}
+.lgu-office-card .office-icon-select {
+    width: 120px;
+}
+.lgu-office-card .office-name-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+}
+.lgu-office-card .office-services-textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font-family: monospace;
+}
+
+/* ========== Liga editor ========== */
+.liga-tab-buttons {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+}
+.liga-tab-btn {
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+}
+.liga-tab-btn.active {
+    color: #2e5fa7;
+    border-bottom-color: #2e5fa7;
+}
+.liga-panel {
+    display: none;
+}
+.liga-panel.active {
+    display: block;
+}
+.liga-item-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+    background: #f9fafb;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+}
+.liga-item-row input {
+    flex: 1;
+    padding: 0.4rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+}
+
+/* ========== Tourism editor ========== */
+.tourism-image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1rem 0;
+}
+.tourism-image-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+}
+.tourism-image-preview {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.tourism-image-item input[type="file"] {
+    width: 100%;
+}
+.tourism-textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+}
+
+/* ========== PESO editor ========== */
+.spes-table-editor {
+    width: 100%;
+    border-collapse: collapse;
+}
+.spes-table-editor th {
+    background: #f1f5f9;
+    padding: 0.5rem;
+    text-align: left;
+}
+.spes-table-editor td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.spes-table-editor input {
+    width: 100%;
+    padding: 0.3rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.3rem;
+}
+.peso-image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1rem 0;
+}
+.peso-image-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+}
+.peso-image-preview {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ========== Gallery editor ========== */
+.gallery-page-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.gallery-page-btn {
+    padding: 0.5rem 1rem;
+    background: #f1f5f9;
+    border-radius: 9999px;
+    cursor: pointer;
+}
+.gallery-page-btn.active {
+    background: #2e5fa7;
+    color: white;
+}
+.gallery-page-panel {
+    display: none;
+}
+.gallery-page-panel.active {
+    display: block;
+}
+.gallery-image-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+.gallery-image-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+    background: #f9fafb;
+}
+.gallery-image-preview {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ========== Disclosure Category Editor ========== */
+.disclosure-category-card {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #2e5fa7;
+}
+.disclosure-category-card .summary-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+.year-items-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+.year-item-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 2rem;
+    padding: 0.2rem 0.5rem 0.2rem 1rem;
+}
+.year-item-wrapper input {
+    border: none;
+    width: 100px;
+    padding: 0.3rem 0;
+    font-size: 0.9rem;
+    background: transparent;
+}
+.year-item-wrapper input:focus {
+    outline: none;
+}
+.remove-year {
+    color: #ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0.25rem;
+}
+.add-year-btn {
+    background: #e6f0ff;
+    color: #2e5fa7;
+    border: 1px dashed #2e5fa7;
+    border-radius: 2rem;
+    padding: 0.3rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+.add-year-btn:hover {
+    background: #d1e0ff;
+}
+.remove-category {
+    float: right;
+    color: #ef4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+.remove-category:hover {
+    color: #b91c1c;
+}
+
+/* ========== Transparency Card Editor ========== */
+.transparency-card-editor {
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border-left: 4px solid #2e5fa7;
+}
+.transparency-card-editor .card-icon-select {
+    width: 160px;
+    margin-right: 1rem;
+}
+.transparency-card-editor .card-title {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.transparency-card-editor .card-desc {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    resize: vertical;
+}
+.transparency-card-editor .card-link-text {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+}
+
+/* ========== Utility ========== */
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+.mt-auto {
+    margin-top: auto;
+}
