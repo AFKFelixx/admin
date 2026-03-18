@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard · Tobias Fornier</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="bg-gray-100 text-gray-800 antialiased flex flex-col h-screen overflow-hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200 py-3 px-6 flex items-center justify-between flex-shrink-0">
+        <div class="text-xl font-bold text-[#2e5fa7]"><i class="fas fa-landmark mr-2"></i>Municipality of Tobias Fornier</div>
+        <div class="flex items-center gap-4">
+            <!-- Live Date/Time - fixed ID -->
+            <div id="liveDateTime" class="text-gray-700 font-medium text-lg"></div>
+            <button id="saveSettings" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-green-700 transition flex items-center gap-1"><i class="fas fa-save"></i> Save All Changes</button>
+            <div class="flex items-center gap-3 ml-2"><span class="text-gray-700 font-medium">Admin User</span><i class="fas fa-user-circle text-3xl text-[#2e5fa7]"></i></div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar with toggle button -->
+        <aside class="sidebar bg-white shadow-xl overflow-y-auto flex-shrink-0 transition-all duration-300" id="mainSidebar">
+            <div class="p-4 flex items-center justify-between border-b border-gray-200">
+                <h2 class="sidebar-title text-2xl font-bold text-[#2e5fa7] transition-opacity duration-300"><i class="fas fa-cogs mr-2"></i><span class="sidebar-text">Admin Panel</span></h2>
+                <button id="sidebarToggle" class="text-gray-600 hover:text-[#2e5fa7] focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+            <nav class="p-4 space-y-1 text-sm font-medium" id="sidebarNav">
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="general">
+                    <i class="fas fa-globe w-6 text-gray-500"></i><span class="sidebar-text">General Settings</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="news">
+                    <i class="fas fa-newspaper w-6 text-gray-500"></i><span class="sidebar-text">News & Updates</span>
+                </a>
+                <div class="border-t border-gray-200 my-2"></div>
+                <p class="sidebar-text px-4 text-xs uppercase text-gray-400 font-semibold tracking-wider">Government</p>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="key-officials">
+                    <i class="fas fa-user-tie w-6 text-gray-500"></i><span class="sidebar-text">Key Officials</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="municipal-profile">
+                    <i class="fas fa-city w-6 text-gray-500"></i><span class="sidebar-text">Municipal Profile</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="lgu-offices">
+                    <i class="fas fa-building w-6 text-gray-500"></i><span class="sidebar-text">LGU Offices & Services</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="liga">
+                    <i class="fas fa-flag w-6 text-gray-500"></i><span class="sidebar-text">Liga Ng Mga Barangay</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="tourism">
+                    <i class="fas fa-umbrella-beach w-6 text-gray-500"></i><span class="sidebar-text">Tourism</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="peso">
+                    <i class="fas fa-briefcase w-6 text-gray-500"></i><span class="sidebar-text">PESO</span>
+                </a>
+                <div class="border-t border-gray-200 my-2"></div>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="gallery">
+                    <i class="fas fa-images w-6 text-gray-500"></i><span class="sidebar-text">Gallery</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="about">
+                    <i class="fas fa-info-circle w-6 text-gray-500"></i><span class="sidebar-text">About</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="transparency">
+                    <i class="fas fa-file-invoice w-6 text-gray-500"></i><span class="sidebar-text">Transparency</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="disclosure">
+                    <i class="fas fa-hand-holding-heart w-6 text-gray-500"></i><span class="sidebar-text">Full Disclosure Policy</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="download">
+                    <i class="fas fa-download w-6 text-gray-500"></i><span class="sidebar-text">Download</span>
+                </a>
+                <div class="border-t border-gray-200 my-2"></div>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="system">
+                    <i class="fas fa-cog w-6 text-gray-500"></i><span class="sidebar-text">System Settings</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="logout">
+                    <i class="fas fa-sign-out-alt w-6 text-gray-500"></i><span class="sidebar-text">Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto bg-gray-100 p-8" id="mainContent">
+            <!-- ===== General Settings Section ===== -->
+            <section id="section-general" class="section active">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4">General Settings</h2>
+                <div class="general-subnav">
+                    <span class="subnav-item active-sub" data-subtarget="site-header">Site Header Panel</span>
+                    <span class="subnav-item" data-subtarget="hero">Hero Section</span>
+                    <span class="subnav-item" data-subtarget="footer">Footer Settings</span>
+                    <span class="subnav-item" data-subtarget="color">Webpage Color Adjustment</span>
+                </div>
+                <div id="subsection-site-header" class="general-subsection active-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+                <div id="subsection-hero" class="general-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+                <div id="subsection-footer" class="general-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+                <div id="subsection-color" class="general-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+            </section>
+
+            <!-- ===== News & Updates Section ===== -->
+            <section id="section-news" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-newspaper mr-2"></i>News & Updates</h2>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">Tabbed editor</span>
+                </div>
+                <div class="news-tab-nav" id="newsTabNav"></div>
+                <div id="newsPanelsContainer"></div>
+            </section>
+
+            <!-- ===== Key Officials Section ===== -->
+            <section id="section-key-officials" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-user-tie mr-2"></i>Key Officials</h2>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the elected officials and department heads. Click the image to upload a photo.</p>
+                    <div id="officialsGrid" class="grid-4 mb-6"></div>
+                    <div class="flex justify-end">
+                        <button id="addOfficialBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Official</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Municipal Profile Editor ===== -->
+            <section id="section-municipal-profile" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-city mr-2"></i>Municipal Profile</h2>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the municipal profile content. Add, edit, or remove sections.</p>
+                    <div class="mb-6">
+                        <label class="block font-semibold mb-2">Banner Image</label>
+                        <div class="flex items-center gap-4">
+                            <img id="profileBannerPreview" src="https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=400&q=80" class="w-40 h-32 object-cover rounded-lg border">
+                            <div class="flex flex-col gap-2">
+                                <input type="file" id="profileBannerUpload" accept="image/*" class="block w-full text-sm">
+                                <button type="button" id="removeBannerBtn" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition"><i class="fas fa-times mr-1"></i>Remove banner</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="profileSectionsContainer" class="space-y-4"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addProfileSection" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Section</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== LGU Offices & Services Editor ===== -->
+            <section id="section-lgu-offices" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-building mr-2"></i>LGU Offices & Services</h2>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the list of LGU offices and their services. Each service should be on a separate line.</p>
+                    <div id="lguOfficesContainer" class="grid-3"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addLguOfficeBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Office</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Liga ng mga Barangay Editor ===== -->
+            <section id="section-liga" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-flag mr-2"></i>Liga Ng Mga Barangay</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the lists of Punong Barangays and SK Chairpersons. Use "vacant" to mark empty positions.</p>
+                    <div class="liga-tab-buttons">
+                        <span class="liga-tab-btn active" id="ligaTabPunong">Punong Barangays</span>
+                        <span class="liga-tab-btn" id="ligaTabSK">SK Chairpersons</span>
+                    </div>
+                    <div id="ligaPunongPanel" class="liga-panel active">
+                        <div id="punongList" class="space-y-2"></div>
+                        <div class="flex justify-end mt-4">
+                            <button id="addPunongBtn" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full"><i class="fas fa-plus-circle mr-1"></i>Add Row</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Leave "Official Name" blank or type "vacant" to mark as vacant.</p>
+                    </div>
+                    <div id="ligaSKPanel" class="liga-panel">
+                        <div id="skList" class="space-y-2"></div>
+                        <div class="flex justify-end mt-4">
+                            <button id="addSKBtn" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full"><i class="fas fa-plus-circle mr-1"></i>Add Row</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Leave "Official Name" blank or type "vacant" to mark as vacant.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Tourism Editor ===== -->
+            <section id="section-tourism" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-umbrella-beach mr-2"></i>Tourism</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Edit the two main sections and the cultural plan image.</p>
+                    <div class="mb-8 border-b pb-6">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Section 1 (Images left, text right)</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block font-semibold mb-2">4 Images (bento grid)</label>
+                                <div id="tourismSection1Images" class="tourism-image-grid"></div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-2">Text content (HTML allowed)</label>
+                                <textarea id="tourismSection1Text" rows="8" class="tourism-textarea"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-8 border-b pb-6">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Section 2 (Text left, images right)</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block font-semibold mb-2">Text content (HTML allowed)</label>
+                                <textarea id="tourismSection2Text" rows="8" class="tourism-textarea"></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-2">4 Images (bento grid)</label>
+                                <div id="tourismSection2Images" class="tourism-image-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Local Resources List (bulleted)</h3>
+                        <textarea id="tourismBulletList" rows="6" class="tourism-textarea" placeholder="Enter each item on a new line"></textarea>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Cultural Development Plan Image</h3>
+                        <div class="flex items-center gap-4">
+                            <img id="culturalPlanPreview" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=200&q=80" class="w-40 h-32 object-cover rounded-lg border">
+                            <div class="flex flex-col gap-2">
+                                <input type="file" id="culturalPlanUpload" accept="image/*" class="hidden">
+                                <button type="button" id="removeCulturalPlanBtn" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition"><i class="fas fa-times mr-1"></i>Remove image</button>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-4">
+                            <button type="button" id="addCulturalPlanBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== PESO Editor ===== -->
+            <section id="section-peso" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-briefcase mr-2"></i>PESO</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage SPES beneficiaries and the PESO modal images.</p>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">SPES Beneficiaries (2009–2021)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="spes-table-editor w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Year(s) Employed</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="spesTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-end mt-4">
+                            <button id="addSpesRowBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Row</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">PESO Modal Images (2 images)</h3>
+                        <div id="pesoImagesContainer" class="peso-image-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Gallery Editor ===== -->
+            <section id="section-gallery" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-images mr-2"></i>Gallery</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage gallery images across 3 pages. Click on an image to upload a new one.</p>
+                    <div class="gallery-page-tabs">
+                        <span class="gallery-page-btn active" data-page="1">Page 1</span>
+                        <span class="gallery-page-btn" data-page="2">Page 2</span>
+                        <span class="gallery-page-btn" data-page="3">Page 3</span>
+                    </div>
+                    <div id="galleryPage1" class="gallery-page-panel active">
+                        <div class="gallery-image-grid" id="galleryGrid1"></div>
+                        <div class="flex justify-end mt-4">
+                            <button class="add-gallery-image bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition" data-page="1"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                    <div id="galleryPage2" class="gallery-page-panel">
+                        <div class="gallery-image-grid" id="galleryGrid2"></div>
+                        <div class="flex justify-end mt-4">
+                            <button class="add-gallery-image bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition" data-page="2"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                    <div id="galleryPage3" class="gallery-page-panel">
+                        <div class="gallery-image-grid" id="galleryGrid3"></div>
+                        <div class="flex justify-end mt-4">
+                            <button class="add-gallery-image bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition" data-page="3"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== About Editor ===== -->
+            <section id="section-about" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-info-circle mr-2"></i>About Page</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Edit the main content of the About page.</p>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Main Heading</label>
+                        <input type="text" id="aboutHeading" value="A progressive municipality in the heart of Antique" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Main Paragraph (HTML allowed)</label>
+                        <textarea id="aboutParagraph" rows="4" class="w-full border rounded-lg px-4 py-2 font-mono">Tobias Fornier (formerly Dao) is a 2nd class municipality in the province of Antique, Philippines. Known for its warm people, rich cultural heritage, and commitment to good governance, we continuously strive for sustainable development and transparent public service.</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Vision</label>
+                        <textarea id="aboutVision" rows="3" class="w-full border rounded-lg px-4 py-2">A self-reliant, progressive, and resilient community with empowered citizens living under transparent, accountable governance by 2030.</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Mission</label>
+                        <textarea id="aboutMission" rows="3" class="w-full border rounded-lg px-4 py-2">To deliver efficient and inclusive public services, promote sustainable development, and uphold the highest standards of transparency and full disclosure.</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Historical Background (HTML allowed)</label>
+                        <textarea id="aboutHistory" rows="10" class="w-full border rounded-lg px-4 py-2 font-mono">[Full historical text – see original about.html]</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Map Embed URL (iframe src)</label>
+                        <input type="url" id="aboutMapEmbed" value="https://maps.google.com/maps?q=Tobias%20Fornier%20Antique&output=embed" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Map Link (clickable text)</label>
+                        <input type="url" id="aboutMapLink" value="https://share.google/2UjMMyqK1MM3l3NWN" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Transparency Editor ===== -->
+            <section id="section-transparency" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-file-invoice mr-2"></i>Transparency</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Edit the background image, pledge text, and the three cards.</p>
+                    <div class="mb-6">
+                        <label class="block font-semibold mb-1">Background Image URL</label>
+                        <input type="url" id="transparencyBgImage" value="" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-8">
+                        <label class="block font-semibold mb-1">Pledge Paragraph (HTML allowed)</label>
+                        <textarea id="transparencyParagraph" rows="6" class="w-full border rounded-lg px-4 py-2 font-mono"></textarea>
+                    </div>
+                    <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Transparency Cards</h3>
+                    <div id="transparencyCardsContainer" class="space-y-6"></div>
+                </div>
+            </section>
+
+            <!-- ===== Full Disclosure Policy Editor ===== -->
+            <section id="section-disclosure" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-hand-holding-heart mr-2"></i>Full Disclosure Policy</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the disclosure categories and their year items.</p>
+                    <div id="disclosureCategoriesContainer" class="space-y-4"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addDisclosureCategory" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition">
+                            <i class="fas fa-plus-circle mr-1"></i>Add Category
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Download Forms Editor ===== -->
+            <section id="section-download" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-download mr-2"></i>Download Forms</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the list of downloadable forms. Each form has an icon, title, description, and download link.</p>
+                    <div id="downloadFormsContainer" class="space-y-4"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addDownloadFormBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Form</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== System Settings ===== -->
+            <section id="section-system" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4">System Settings</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">General System Configuration</h3>
+                    <div class="grid gap-4">
+                        <div><label class="block font-semibold mb-1">Site Maintenance Mode</label>
+                            <select id="maintenanceMode" class="border rounded px-4 py-2 w-full">
+                                <option value="off">Off</option>
+                                <option value="on">On</option>
+                            </select>
+                        </div>
+                        <div><label class="block font-semibold mb-1">Default Language</label>
+                            <select id="defaultLang" class="border rounded px-4 py-2 w-full">
+                                <option value="en">English</option>
+                                <option value="fil">Filipino</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="flex-between mb-4">
+                        <h3 class="text-xl font-bold text-[#2e5fa7]">User Management</h3>
+                        <button id="addUserBtn" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full"><i class="fas fa-plus-circle mr-1"></i>Add User</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 border-b">
+                                    <th class="px-3 py-2 text-left">Username</th>
+                                    <th class="px-3 py-2 text-left">Email</th>
+                                    <th class="px-3 py-2 text-left">Role</th>
+                                    <th class="px-3 py-2 text-left">Status</th>
+                                    <th class="px-3 py-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- User Modal (hidden by default) -->
+    <div id="userModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+            <h3 class="text-xl font-bold text-[#2e5fa7] mb-4" id="modalTitle">Add User</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username</label>
+                    <input type="text" id="modalUsername" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" id="modalEmail" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Role</label>
+                    <select id="modalRole" class="w-full border rounded-lg px-3 py-2">
+                        <option value="Administrator">Administrator</option>
+                        <option value="Editor">Editor</option>
+                        <option value="Viewer">Viewer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password</label>
+                    <input type="text" id="modalPassword" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Status</label>
+                    <select id="modalStatus" class="w-full border rounded-lg px-3 py-2">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="modalCancel" class="px-4 py-2 border rounded-lg hover:bg-gray-100">Cancel</button>
+                <button id="modalSave" class="px-4 py-2 bg-[#2e5fa7] text-white rounded-lg hover:bg-[#1e3f7a]">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
