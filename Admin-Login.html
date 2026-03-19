@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase client library (must be loaded before inline script) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @layer base { * { font-family: 'Inter', system-ui, sans-serif; } }
         body.dark-mode { background-color: #0b1120; color: #e2e8f0; }
@@ -25,6 +27,9 @@
         body.dark-mode .theme-toggle { color: #fbbf24; }
         .error-message { color: #b91c1c; font-size: 0.875rem; margin-top: 0.5rem; text-align: center; }
         body.dark-mode .error-message { color: #f87171; }
+        .spinner { border: 2px solid #f3f3f3; border-top: 2px solid #2e5fa7; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn-loading { opacity: 0.7; cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
@@ -57,9 +62,9 @@
                 </div>
             </div>
 
-            <button type="submit" 
-                    class="w-full bg-[#2e5fa7] text-white py-3 rounded-xl font-semibold text-lg hover:bg-[#1d4a8b] transition shadow-lg shadow-[#2e5fa7]/20">
-                <i class="fas fa-sign-in-alt mr-2"></i> Sign in
+            <button type="submit" id="loginButton"
+                    class="w-full bg-[#2e5fa7] text-white py-3 rounded-xl font-semibold text-lg hover:bg-[#1d4a8b] transition shadow-lg shadow-[#2e5fa7]/20 flex items-center justify-center gap-2">
+                <span>Sign in</span>
             </button>
 
             <div id="loginError" class="error-message hidden"></div>
@@ -74,7 +79,7 @@
 
     <script>
         (function() {
-            // Dark mode
+            // ---------- Dark mode toggle (unchanged) ----------
             const themeToggle = document.getElementById('themeToggle');
             const themeIcon = document.getElementById('themeIcon');
             const body = document.body;
@@ -99,64 +104,104 @@
                 }
             });
 
-            // Load logo from CMS if available
-            const logoImg = document.getElementById('loginLogo');
-            try {
-                const saved = localStorage.getItem('tobiasFornierCMS');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    if (data.site && data.site.logo) logoImg.src = data.site.logo;
-                }
-            } catch (e) {}
+            // ---------- Supabase client initialization ----------
+            const supabaseUrl = 'https://ormkzcbrhvpwruadvzua.supabase.co';
+            const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWt6Y2JyaHZwd3J1YWR2enVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NDUyMjMsImV4cCI6MjA4OTQyMTIyM30.mEXwx3O_JYmznGEmvEFTL3n5Jt1D9xqOXC4eHPoysp0';
+            
+            // Check if the Supabase library loaded correctly
+            if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
+                console.error('Supabase library not loaded correctly.');
+                document.getElementById('loginError').textContent = 'System error: Supabase client not available.';
+                document.getElementById('loginError').classList.remove('hidden');
+                return;
+            }
+            
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-            // Login validation against users stored in localStorage
+            // ---------- Load logo from site_settings ----------
+            const logoImg = document.getElementById('loginLogo');
+            async function loadLogo() {
+                try {
+                    const { data, error } = await supabase
+                        .from('site_settings')
+                        .select('logo_url')
+                        .eq('id', 1)
+                        .single();
+                    if (!error && data?.logo_url) {
+                        logoImg.src = data.logo_url;
+                    } else {
+                        // Fallback to localStorage (if any)
+                        const saved = localStorage.getItem('tobiasFornierCMS');
+                        if (saved) {
+                            const data = JSON.parse(saved);
+                            if (data.site && data.site.logo) logoImg.src = data.site.logo;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not load logo from Supabase', e);
+                }
+            }
+            loadLogo();
+
+            // ---------- Login form submission ----------
             const loginForm = document.getElementById('loginForm');
             const errorDiv = document.getElementById('loginError');
+            const loginButton = document.getElementById('loginButton');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
 
-            loginForm.addEventListener('submit', (e) => {
+            usernameInput.addEventListener('input', () => errorDiv.classList.add('hidden'));
+            passwordInput.addEventListener('input', () => errorDiv.classList.add('hidden'));
+
+            loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value.trim();
 
-                // Get users from localStorage
-                let users = [];
-                try {
-                    const saved = localStorage.getItem('tobiasFornierCMS');
-                    if (saved) {
-                        const data = JSON.parse(saved);
-                        users = data.users || [];
-                    }
-                } catch (err) {
-                    console.warn('Failed to parse users', err);
-                }
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value.trim();
 
-                // Fallback default users if none exist (first run)
-                if (users.length === 0) {
-                    users = [
-                        { username: 'admin', email: 'admin@example.com', password: 'admin123', role: 'Administrator', status: 'Active' },
-                        { username: 'editor', email: 'editor@example.com', password: 'editor123', role: 'Editor', status: 'Active' }
-                    ];
-                }
-
-                const user = users.find(u => 
-                    (u.username === username || u.email === username) && u.password === password && u.status === 'Active'
-                );
-
-                if (user) {
-                    // Set logged-in flag
-                    sessionStorage.setItem('loggedIn', 'true');
-                    // Optional: store current user info
-                    sessionStorage.setItem('currentUser', JSON.stringify({ username: user.username, role: user.role }));
-                    window.location.href = 'admin.html';
-                } else {
-                    errorDiv.textContent = 'Invalid username/password or inactive account.';
+                if (!username || !password) {
+                    errorDiv.textContent = 'Please enter both username and password.';
                     errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Show loading state
+                loginButton.disabled = true;
+                loginButton.innerHTML = '<span class="spinner"></span> Signing in...';
+                loginButton.classList.add('btn-loading');
+                errorDiv.classList.add('hidden');
+
+                try {
+                    const { data, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .or(`username.eq.${username},email.eq.${username}`)
+                        .eq('password', password) // ⚠️ Plain text – replace with hash in production
+                        .eq('status', 'Active')
+                        .single();
+
+                    if (error || !data) {
+                        throw new Error('Invalid username/password or inactive account.');
+                    }
+
+                    // Success – set session
+                    sessionStorage.setItem('loggedIn', 'true');
+                    sessionStorage.setItem('currentUser', JSON.stringify({
+                        id: data.id,
+                        username: data.username,
+                        role: data.role
+                    }));
+
+                    window.location.href = 'admin.html';
+                } catch (err) {
+                    errorDiv.textContent = err.message;
+                    errorDiv.classList.remove('hidden');
+                } finally {
+                    loginButton.disabled = false;
+                    loginButton.innerHTML = 'Sign in';
+                    loginButton.classList.remove('btn-loading');
                 }
             });
-
-            // Hide error on input
-            document.getElementById('username').addEventListener('input', () => errorDiv.classList.add('hidden'));
-            document.getElementById('password').addEventListener('input', () => errorDiv.classList.add('hidden'));
         })();
     </script>
 </body>
