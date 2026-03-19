@@ -2,1282 +2,522 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Municipality of Tobias Fornier</title>
-    <meta name="description" content="Official website of the Municipality of Tobias Fornier, Antique – transparent governance, LGU services, news, and community development.">
-    <meta name="keywords" content="Tobias Fornier, Antique, LGU, municipal services, transparency, full disclosure">
-    <meta name="author" content="LGU Tobias Fornier">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard · Tobias Fornier</title>
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/admin.css">
     <!-- Supabase client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Custom Supabase client (must attach to window) -->
-    <script src="supabase-client.js"></script>
+    <!-- Custom Supabase client (attaches to window) -->
+    <script src="js/supabase-client.js"></script>
     <style>
-        /* (keep all your existing styles – unchanged) */
-        @layer base {
-            * { font-family: 'Inter', system-ui, sans-serif; }
-        }
-        /* dark mode custom styles (overrides) */
-        body.dark-mode {
-            background-color: #1a202c; /* gray-900 */
-            color: #e2e8f0; /* gray-200 */
-        }
-        body.dark-mode header,
-        body.dark-mode .bg-white,
-        body.dark-mode .bg-gray-50,
-        body.dark-mode .footer,
-        body.dark-mode .modal-content {
-            background-color: #2d3748 !important; /* gray-800 */
-            color: #e2e8f0;
-            border-color: #4a5568 !important;
-        }
-        body.dark-mode .text-gray-800,
-        body.dark-mode .text-gray-700,
-        body.dark-mode .text-gray-600,
-        body.dark-mode .text-gray-500 {
-            color: #cbd5e0 !important; /* gray-300 */
-        }
-        body.dark-mode .bg-gray-100 {
-            background-color: #2d3748 !important;
-        }
-        body.dark-mode .border-gray-200,
-        body.dark-mode .border-gray-300 {
-            border-color: #4a5568 !important;
-        }
-        body.dark-mode .shadow-lg {
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.3);
-        }
-        body.dark-mode .news-hover-card {
-            background-color: #2d3748;
-        }
-        body.dark-mode .disclosure-card,
-        body.dark-mode .official-item,
-        body.dark-mode .year-item {
-            background-color: #374151;
-            border-color: #4b5563;
-        }
-        body.dark-mode .social-sidebar a {
-            color: #cbd5e0;
-        }
-        body.dark-mode .social-sidebar a:hover {
-            background: #2e5fa7;
-            color: white;
-        }
-        body.dark-mode input {
-            background-color: #4a5568;
-            color: #f7fafc;
-            border-color: #2d3748;
-        }
-        /* toggle button style */
-        .theme-toggle {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 1.4rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #2e5fa7;
-            transition: transform 0.2s;
-        }
-        .theme-toggle:hover {
-            transform: scale(1.1);
-            color: #1d3a6d;
-        }
-        body.dark-mode .theme-toggle {
-            color: #fbbf24; /* amber-400 */
-        }
-        /* additional dark mode white text overrides */
-        body.dark-mode #siteNameText,
-        body.dark-mode #headerDateTime {
-            color: #ffffff !important;
-        }
-        body.dark-mode nav a {
-            color: #ffffff !important;
-        }
-        body.dark-mode nav a:hover {
-            color: #2e5fa7 !important;
-        }
-        body.dark-mode input {
-            color: #ffffff;
-            background-color: #4a5568;
-        }
-        body.dark-mode input::placeholder {
-            color: #e2e8f0;
-        }
-        /* Read more, description text, user icon white in dark mode */
-        body.dark-mode .news-hover-card .text-\[#2e5fa7\] {
-            color: #ffffff !important;
-        }
-        body.dark-mode .news-hover-card .text-gray-600,
-        body.dark-mode .news-hover-card .text-gray-500 {
-            color: #e2e8f0 !important;
-        }
-        body.dark-mode .news-hover-card .fa-user {
-            color: #ffffff !important;
-        }
-        /* View More in Bento Gallery - white in dark mode */
-        body.dark-mode .bento-gallery-view-more {
-            color: #ffffff !important;
-        }
-        /* rest of your existing styles */
-        .card-hover { transition: all 0.3s ease; }
-        .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1); }
-        .hero-card-hover { transition: transform 0.4s ease, box-shadow 0.3s; }
-        .hero-card-hover:hover { transform: scale(1.02) translateY(-4px); box-shadow: 0 25px 30px -12px rgba(0,0,0,0.25); }
-        .gradient-overlay-blue { background: linear-gradient(135deg, rgba(46, 94, 167, 0.85) 0%, rgba(46, 94, 167, 0.4) 70%, transparent 100%); }
-        .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .sticky-header { transition: box-shadow 0.2s; }
-        .sticky-header.scrolled { box-shadow: 0 6px 14px rgba(0,20,40,0.1); background: rgba(255,255,255,0.98); backdrop-filter: blur(4px); }
-        body.dark-mode .sticky-header.scrolled { background: rgba(45,55,72,0.98) !important; }
-        .hero-title-shadow { text-shadow: 0 4px 20px rgba(0, 15, 30, 0.5); }
-        .news-hover-card { transition: transform 0.3s, box-shadow 0.3s; }
-        .news-hover-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -10px rgba(0,0,0,0.2); }
-        .play-icon-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; transition: background 0.2s; cursor: pointer; }
-        .play-icon-overlay:hover { background: #2e5fa7; }
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.75rem;
-        }
-        .bento-item {
-            position: relative;
-            overflow: hidden;
-            border-radius: 1rem;
-            aspect-ratio: 1 / 1;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .bento-item:hover {
-            transform: scale(1.02);
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
-        }
-        .bento-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s ease;
-        }
-        .bento-item:hover img {
-            transform: scale(1.1);
-        }
-        .bento-item.large {
-            grid-column: span 2;
-            grid-row: span 2;
-            aspect-ratio: 2 / 2;
-        }
-        .bento-item.wide {
-            grid-column: span 2;
-            aspect-ratio: 2 / 1;
-        }
-        .bento-item.tall {
-            grid-row: span 2;
-            aspect-ratio: 1 / 2;
-        }
-        /* Mobile friendly bento grid adjustments */
-        @media (max-width: 640px) {
-            .bento-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .bento-item.large {
-                grid-column: span 2;
-                grid-row: span 1;
-                aspect-ratio: 2 / 1;
-            }
-            .bento-item.tall {
-                grid-row: span 1;
-                aspect-ratio: 1 / 1;
-            }
-            .bento-item.wide {
-                grid-column: span 2;
-                aspect-ratio: 2 / 1;
-            }
-        }
-        /* Adjusted text-3xl size as requested */
-        .text-3xl {
-            font-size: 1.2rem;
-            line-height: 2.25rem;
-        }
-        /* Ensure hero title still stands out (optional override) */
-        h3.text-3xl.font-bold {
-            font-size: 1.875rem; /* keep original for hero titles */
-        }
-        /* But for side article categories, apply the new size */
-        .news-hover-card .text-3xl.font-bold {
-            font-size: 1.2rem;
-            line-height: 2.25rem;
-        }
-        .video-modal {
+        /* Loading overlay */
+        #loading-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(255,255,255,0.8);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 9999;
-            visibility: hidden;
+            backdrop-filter: blur(4px);
+            transition: opacity 0.3s;
+        }
+        #loading-overlay.hidden {
             opacity: 0;
-            transition: opacity 0.3s ease;
+            pointer-events: none;
         }
-        .video-modal.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        .video-modal-content {
-            position: relative;
-            width: 90%;
-            max-width: 960px;
-            background: #000;
-            border-radius: 1rem;
-            overflow: hidden;
-        }
-        .video-modal video {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .video-modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            width: 2.5rem;
-            height: 2.5rem;
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2e5fa7;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-            z-index: 10;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
         }
-        .video-modal-close:hover {
-            background: rgba(255,255,255,0.4);
-        }
-        .disclosure-card { background: #f9fafc; border-radius: 1.5rem; padding: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-        .disclosure-category { margin-bottom: 1.25rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: white; overflow: hidden; }
-        .disclosure-category summary { font-weight: 600; padding: 1rem 1.5rem; background: #f1f5f9; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
-        .disclosure-category summary::after { content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: 0.9rem; transition: transform 0.2s; }
-        .disclosure-category[open] summary::after { transform: rotate(180deg); }
-        .year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; padding: 1.5rem; }
-        .year-item { background: #f8fafc; border-radius: 0.75rem; padding: 0.75rem 1rem; border-left: 4px solid #2e5fa7; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; }
-        .modal-overlay.active { visibility: visible; opacity: 1; }
-        .modal-content { background: white; border-radius: 2rem; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
-        .modal-close { position: absolute; top: 1rem; right: 1rem; background: #f1f5f9; border: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
-        .modal-close:hover { background: #e2e8f0; }
-        .tab-buttons { display: flex; gap: 1rem; margin: 1.5rem 0 1rem; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
-        .tab-btn { padding: 0.5rem 1rem; font-weight: 600; color: #4b5563; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
-        .tab-btn.active { color: #2e5fa7; border-bottom-color: #2e5fa7; }
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; }
-        .official-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap: 1rem; }
-        .official-item { background: #f8fafc; padding: 0.75rem 1rem; border-radius: 0.75rem; border-left: 4px solid #2e5fa7; }
-        .close-btn { position: absolute; top: 1rem; right: 1rem; background: white; border: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s; }
-        .close-btn:hover { background: #f1f5f9; transform: scale(1.05); }
-        .historical-content p { margin-bottom: 1rem; line-height: 1.7; }
-        .profile-text p { margin-bottom: 1rem; line-height: 1.7; }
-
-        /* Floating sticky social sidebar */
-        .social-sidebar {
-            position: fixed;
-            top: 50%;
-            right: 0;
-            transform: translateY(-50%);
-            z-index: 60;
-            display: flex;
-            flex-direction: column;
-            background: rgba(255,255,255,0.9);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
-            border-radius: 1rem 0 0 1rem;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-right: none;
-        }
-        .social-sidebar a {
-            padding: 0.9rem 1rem;
-            font-size: 1.6rem;
-            transition: all 0.2s;
-            color: #2e5fa7;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-        .social-sidebar a:last-child {
-            border-bottom: none;
-        }
-        .social-sidebar a:hover {
-            background: #2e5fa7;
-            color: white;
-            transform: scale(1.05);
-        }
-        @media (max-width: 768px) {
-            .social-sidebar {
-                display: none;
-            }
-        }
-
-        /* slider fade transition */
-        .slider-slide {
-            transition: opacity 1.5s ease-in-out;
-        }
-
-        /* Mobile font adjustments */
-        @media (max-width: 768px) {
-            #siteNameText {
-                font-size: 1.2rem;
-            }
-            .theme-toggle {
-                font-size: 1.2rem;
-            }
-            /* Hide date/time on mobile */
-            #headerDateTime {
-                display: none;
-            }
-        }
-        /* Mobile drawer overlay and panel styles - updated for dark mode */
-        #mobileDrawerOverlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0,0,0,0.4); /* dimming only, no blur */
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s ease, visibility 0.3s;
-        }
-        #mobileDrawerOverlay.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        #mobileDrawerPanel {
-            position: absolute;
-            top: 0;
-            right: 0;
-            height: 100%;
-            width: 280px;
-            max-width: 80%;
-            background: #ffffff; /* white background */
-            color: #000000; /* black text */
-            box-shadow: -5px 0 25px rgba(0,0,0,0.2);
-            transform: translateX(100%);
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem 1rem;
-        }
-        #mobileDrawerOverlay.active #mobileDrawerPanel {
-            transform: translateX(0);
-        }
-
-        /* Mobile drawer link styles - base white bg, black text */
-        #mobileDrawerPanel nav a,
-        #mobileDrawerPanel .dropdown-parent {
-            color: #000000;
-            text-decoration: none;
-            display: block;
-            padding: 0.5rem 0;
-            font-weight: 500;
-            transition: none;
-        }
-        #mobileDrawerPanel nav .dropdown-parent {
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #mobileDrawerPanel nav .dropdown-parent i {
-            transition: transform 0.2s;
-            color: #000000;
-        }
-        #mobileDrawerPanel nav .submenu {
-            padding-left: 1rem;
-            margin: 0.25rem 0 0.5rem 0;
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error-banner {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #fecaca;
             display: none;
         }
-        #mobileDrawerPanel nav .submenu.open {
+        .error-banner.visible {
             display: block;
-        }
-        #mobileDrawerPanel nav .submenu a {
-            padding: 0.4rem 0;
-            font-weight: 400;
-        }
-        /* no hover effect intentionally */
-        #mobileDrawerPanel nav a:hover,
-        #mobileDrawerPanel .dropdown-parent:hover {
-            color: #000000;
-            background: transparent;
-        }
-
-        /* DARK MODE OVERRIDES FOR MOBILE DRAWER - NOW BLACK BACKGROUND, WHITE TEXT */
-        body.dark-mode #mobileDrawerPanel {
-            background: #000000 !important;
-            color: #ffffff !important;
-        }
-        body.dark-mode #mobileDrawerPanel nav a,
-        body.dark-mode #mobileDrawerPanel .dropdown-parent {
-            color: #ffffff !important;
-        }
-        body.dark-mode #mobileDrawerPanel .dropdown-parent i {
-            color: #ffffff !important;
-        }
-        body.dark-mode #mobileDrawerPanel nav .submenu a {
-            color: #ffffff !important;
-        }
-        body.dark-mode #mobileDrawerPanel nav .submenu {
-            background-color: #1a1a1a; /* slightly lighter black for submenu */
-        }
-        /* remove any forced white bg in dark mode */
-        body.dark-mode #mobileDrawerPanel nav a:hover,
-        body.dark-mode #mobileDrawerPanel .dropdown-parent:hover {
-            color: #ffffff !important;
-            background: #333333;
-        }
-
-        /* Loading indicator for content */
-        .loading-placeholder {
-            text-align: center;
-            padding: 3rem;
-            color: #6b7280;
-            font-size: 1.2rem;
         }
     </style>
 </head>
-<body class="bg-white text-gray-800 antialiased scroll-smooth">
+<body class="bg-gray-100 text-gray-800 antialiased flex flex-col h-screen overflow-hidden">
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
 
-    <!-- FLOATING STICKY SOCIAL MEDIA SIDEBAR (populated by JS) -->
-    <div class="social-sidebar"></div>
-
-    <!-- MODALS (unchanged – keep as in original) -->
-    <div id="directoryModal" class="modal-overlay">...</div>
-    <div id="financialModal" class="modal-overlay"></div>
-    <div id="bidsModal" class="modal-overlay"></div>
-    <div id="sanggunianModal" class="modal-overlay"></div>
-    <div id="officeServiceModal" class="modal-overlay"></div>
-
-    <!-- HEADER (same as original) -->
-    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200/60 sticky-header transition-shadow" id="mainHeader">
-        <!-- First row: logo + site name (left) / date/time + toggle (right) -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <img id="siteLogo" src="" alt="Logo" class="h-12 w-auto hidden">
-                <span id="siteNameText" class="text-xl lg:text-2xl font-bold tracking-tight text-[#2e5fa7]">Municipality of Tobias Fornier</span>
-            </div>
-            <div class="flex items-center gap-2 md:gap-3">
-                <div id="headerDateTime" class="text-gray-600 text-sm"></div>
-                <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">
-                    <i class="fas fa-sun" id="themeIcon"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Second row: desktop nav + mobile search/hamburger (same as original) -->
-        <div class="border-t border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-                <!-- Desktop navigation + search -->
-                <div class="hidden md:flex md:items-center md:justify-between">
-                    <nav class="flex-1 flex justify-center items-center space-x-2 md:space-x-4 text-sm font-medium text-gray-700 flex-nowrap">
-                        <a href="index.html" class="hover:text-[#2e5fa7] transition px-2 py-2 whitespace-nowrap">Home</a>
-                        <!-- Government dropdown -->
-                        <div class="relative group">...</div>
-                        <!-- Transparency dropdown -->
-                        <div class="relative group">...</div>
-                        <a href="about.html" class="hover:text-[#2e5fa7] transition px-2 py-2 whitespace-nowrap">About</a>
-                        <a href="#contact" class="hover:text-[#2e5fa7] transition px-2 py-2 whitespace-nowrap">Contact Us</a>
-                        <a href="downloadform.html" class="hover:text-[#2e5fa7] transition px-2 py-2 whitespace-nowrap">Download Form</a>
-                        <!-- Desktop search bar -->
-                        <div class="flex items-center flex-none">
-                            <input type="text" id="desktopSearchInput" placeholder="Search..." class="px-3 py-1 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-[#2e5fa7] text-sm w-40 lg:w-55">
-                            <button class="desktop-search-btn bg-[#2e5fa7] text-white px-3 py-1 rounded-r-md hover:bg-[#1d3a6d] transition text-sm"><i class="fas fa-search"></i></button>
-                        </div>
-                    </nav>
-                </div>
-
-                <!-- Mobile second row: search + hamburger -->
-                <div class="flex md:hidden items-center justify-between w-full gap-2">
-                    <div class="flex items-center flex-1 mobile-search">
-                        <input type="text" id="mobileSearchInput" placeholder="Search..." class="w-full px-3 py-1.5 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-[#2e5fa7] text-sm">
-                        <button id="mobileSearchBtn" class="bg-[#2e5fa7] text-white px-3 py-1.5 rounded-r-md hover:bg-[#1d3a6d] transition text-sm"><i class="fas fa-search"></i></button>
-                    </div>
-                    <button id="hamburgerBtn" class="p-2 text-[#2e5fa7] focus:outline-none flex-none">
-                        <i class="fas fa-bars text-2xl"></i>
-                    </button>
-                </div>
-            </div>
+    <header class="bg-white shadow-sm border-b border-gray-200 py-3 px-6 flex items-center justify-between flex-shrink-0">
+        <div class="text-xl font-bold text-[#2e5fa7]"><i class="fas fa-landmark mr-2"></i>Municipality of Tobias Fornier</div>
+        <div class="flex items-center gap-4">
+            <!-- Live Date/Time -->
+            <div id="liveDateTime" class="text-gray-700 font-medium text-lg"></div>
+            <button id="saveSettings" class="bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-green-700 transition flex items-center gap-1"><i class="fas fa-save"></i> Save All Changes</button>
+            <div class="flex items-center gap-3 ml-2"><span class="text-gray-700 font-medium">Admin User</span><i class="fas fa-user-circle text-3xl text-[#2e5fa7]"></i></div>
         </div>
     </header>
 
-    <!-- Mobile drawer overlay (right side panel) – unchanged -->
-    <div id="mobileDrawerOverlay">...</div>
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar with toggle button -->
+        <aside class="sidebar bg-white shadow-xl overflow-y-auto flex-shrink-0 transition-all duration-300" id="mainSidebar">
+            <div class="p-4 flex items-center justify-between border-b border-gray-200">
+                <h2 class="sidebar-title text-2xl font-bold text-[#2e5fa7] transition-opacity duration-300"><i class="fas fa-cogs mr-2"></i><span class="sidebar-text">Admin Panel</span></h2>
+                <button id="sidebarToggle" class="text-gray-600 hover:text-[#2e5fa7] focus:outline-none">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+            <nav class="p-4 space-y-1 text-sm font-medium" id="sidebarNav">
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="general">
+                    <i class="fas fa-globe w-6 text-gray-500"></i><span class="sidebar-text">General Settings</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="news">
+                    <i class="fas fa-newspaper w-6 text-gray-500"></i><span class="sidebar-text">News & Updates</span>
+                </a>
+                <div class="border-t border-gray-200 my-2"></div>
+                <p class="sidebar-text px-4 text-xs uppercase text-gray-400 font-semibold tracking-wider">Government</p>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="key-officials">
+                    <i class="fas fa-user-tie w-6 text-gray-500"></i><span class="sidebar-text">Key Officials</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="municipal-profile">
+                    <i class="fas fa-city w-6 text-gray-500"></i><span class="sidebar-text">Municipal Profile</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="lgu-offices">
+                    <i class="fas fa-building w-6 text-gray-500"></i><span class="sidebar-text">LGU Offices & Services</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="liga">
+                    <i class="fas fa-flag w-6 text-gray-500"></i><span class="sidebar-text">Liga Ng Mga Barangay</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="tourism">
+                    <i class="fas fa-umbrella-beach w-6 text-gray-500"></i><span class="sidebar-text">Tourism</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="peso">
+                    <i class="fas fa-briefcase w-6 text-gray-500"></i><span class="sidebar-text">PESO</span>
+                </a>
+                <div class="border-t border-gray-200 my-2"></div>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="gallery">
+                    <i class="fas fa-images w-6 text-gray-500"></i><span class="sidebar-text">Gallery</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="about">
+                    <i class="fas fa-info-circle w-6 text-gray-500"></i><span class="sidebar-text">About</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="transparency">
+                    <i class="fas fa-file-invoice w-6 text-gray-500"></i><span class="sidebar-text">Transparency</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="disclosure">
+                    <i class="fas fa-hand-holding-heart w-6 text-gray-500"></i><span class="sidebar-text">Full Disclosure Policy</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="download">
+                    <i class="fas fa-download w-6 text-gray-500"></i><span class="sidebar-text">Download</span>
+                </a>
+                <div class="border-t border-gray-200 my-2"></div>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="system">
+                    <i class="fas fa-cog w-6 text-gray-500"></i><span class="sidebar-text">System Settings</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg transition" data-section="logout">
+                    <i class="fas fa-sign-out-alt w-6 text-gray-500"></i><span class="sidebar-text">Logout</span>
+                </a>
+            </nav>
+        </aside>
 
-    <main class="overflow-x-hidden" id="mainContent">
-        <!-- HERO SLIDER (dynamic) -->
-        <section id="home" class="relative w-full min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden">
-            <!-- Slides will be inserted here by JavaScript -->
-            <div class="absolute inset-0 gradient-overlay-blue"></div>
-            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-12 md:py-20">
-                <div class="text-white max-w-2xl">
-                    <h1 class="text-5xl md:text-7xl font-bold leading-tight hero-title-shadow">Dedicated to<br>Your Community</h1>
-                    <p class="text-xl md:text-2xl mt-4 text-white/90 font-light tracking-wide">Municipality of Tobias Fornier Splendor from Summit to Sea</p>
+        <main class="flex-1 overflow-y-auto bg-gray-100 p-8" id="mainContent">
+            <!-- Error banner (hidden by default) -->
+            <div id="error-container" class="error-banner"></div>
+
+            <!-- ===== General Settings Section ===== -->
+            <section id="section-general" class="section active">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4">General Settings</h2>
+                <div class="general-subnav">
+                    <span class="subnav-item active-sub" data-subtarget="site-header">Site Header Panel</span>
+                    <span class="subnav-item" data-subtarget="hero">Hero Section</span>
+                    <span class="subnav-item" data-subtarget="footer">Footer Settings</span>
+                    <span class="subnav-item" data-subtarget="color">Webpage Color Adjustment</span>
+                </div>
+                <div id="subsection-site-header" class="general-subsection active-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+                <div id="subsection-hero" class="general-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+                <div id="subsection-footer" class="general-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+                <div id="subsection-color" class="general-subsection bg-white rounded-2xl p-6 shadow-sm"></div>
+            </section>
+
+            <!-- ===== News & Updates Section ===== -->
+            <section id="section-news" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-newspaper mr-2"></i>News & Updates</h2>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">Tabbed editor</span>
+                </div>
+                <div class="news-tab-nav" id="newsTabNav"></div>
+                <div id="newsPanelsContainer"></div>
+            </section>
+
+            <!-- ===== Key Officials Section ===== -->
+            <section id="section-key-officials" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-user-tie mr-2"></i>Key Officials</h2>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the elected officials and department heads. Click the image to upload a photo.</p>
+                    <div id="officialsGrid" class="grid-4 mb-6"></div>
+                    <div class="flex justify-end">
+                        <button id="addOfficialBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Official</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Municipal Profile Editor ===== -->
+            <section id="section-municipal-profile" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-city mr-2"></i>Municipal Profile</h2>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the municipal profile content. Add, edit, or remove sections.</p>
+                    <div class="mb-6">
+                        <label class="block font-semibold mb-2">Banner Image</label>
+                        <div class="flex items-center gap-4">
+                            <img id="profileBannerPreview" src="https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=400&q=80" class="w-40 h-32 object-cover rounded-lg border">
+                            <div class="flex flex-col gap-2">
+                                <input type="file" id="profileBannerUpload" accept="image/*" class="block w-full text-sm">
+                                <button type="button" id="removeBannerBtn" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition"><i class="fas fa-times mr-1"></i>Remove banner</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="profileSectionsContainer" class="space-y-4"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addProfileSection" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Section</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== LGU Offices & Services Editor ===== -->
+            <section id="section-lgu-offices" class="section">
+                <div class="flex-between mb-4">
+                    <h2 class="text-3xl font-bold text-[#2e5fa7]"><i class="fas fa-building mr-2"></i>LGU Offices & Services</h2>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the list of LGU offices and their services. Each service should be on a separate line.</p>
+                    <div id="lguOfficesContainer" class="grid-3"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addLguOfficeBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Office</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Liga ng mga Barangay Editor ===== -->
+            <section id="section-liga" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-flag mr-2"></i>Liga Ng Mga Barangay</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the lists of Punong Barangays and SK Chairpersons. Use "vacant" to mark empty positions.</p>
+                    <div class="liga-tab-buttons">
+                        <span class="liga-tab-btn active" id="ligaTabPunong">Punong Barangays</span>
+                        <span class="liga-tab-btn" id="ligaTabSK">SK Chairpersons</span>
+                    </div>
+                    <div id="ligaPunongPanel" class="liga-panel active">
+                        <div id="punongList" class="space-y-2"></div>
+                        <div class="flex justify-end mt-4">
+                            <button id="addPunongBtn" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full"><i class="fas fa-plus-circle mr-1"></i>Add Row</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Leave "Official Name" blank or type "vacant" to mark as vacant.</p>
+                    </div>
+                    <div id="ligaSKPanel" class="liga-panel">
+                        <div id="skList" class="space-y-2"></div>
+                        <div class="flex justify-end mt-4">
+                            <button id="addSKBtn" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full"><i class="fas fa-plus-circle mr-1"></i>Add Row</button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Leave "Official Name" blank or type "vacant" to mark as vacant.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Tourism Editor ===== -->
+            <section id="section-tourism" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-umbrella-beach mr-2"></i>Tourism</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Edit the two main sections and the cultural plan image.</p>
+                    <div class="mb-8 border-b pb-6">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Section 1 (Images left, text right)</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block font-semibold mb-2">4 Images (bento grid)</label>
+                                <div id="tourismSection1Images" class="tourism-image-grid"></div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-2">Text content (HTML allowed)</label>
+                                <textarea id="tourismSection1Text" rows="8" class="tourism-textarea"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-8 border-b pb-6">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Section 2 (Text left, images right)</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block font-semibold mb-2">Text content (HTML allowed)</label>
+                                <textarea id="tourismSection2Text" rows="8" class="tourism-textarea"></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-semibold mb-2">4 Images (bento grid)</label>
+                                <div id="tourismSection2Images" class="tourism-image-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Local Resources List (bulleted)</h3>
+                        <textarea id="tourismBulletList" rows="6" class="tourism-textarea" placeholder="Enter each item on a new line"></textarea>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Cultural Development Plan Image</h3>
+                        <div class="flex items-center gap-4">
+                            <img id="culturalPlanPreview" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=200&q=80" class="w-40 h-32 object-cover rounded-lg border">
+                            <div class="flex flex-col gap-2">
+                                <input type="file" id="culturalPlanUpload" accept="image/*" class="hidden">
+                                <button type="button" id="removeCulturalPlanBtn" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition"><i class="fas fa-times mr-1"></i>Remove image</button>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-4">
+                            <button type="button" id="addCulturalPlanBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== PESO Editor ===== -->
+            <section id="section-peso" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-briefcase mr-2"></i>PESO</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage SPES beneficiaries and the PESO modal images.</p>
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">SPES Beneficiaries (2009–2021)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="spes-table-editor w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Year(s) Employed</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="spesTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-end mt-4">
+                            <button id="addSpesRowBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Row</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">PESO Modal Images (2 images)</h3>
+                        <div id="pesoImagesContainer" class="peso-image-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Gallery Editor ===== -->
+            <section id="section-gallery" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-images mr-2"></i>Gallery</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage gallery images across 3 pages. Click on an image to upload a new one.</p>
+                    <div class="gallery-page-tabs">
+                        <span class="gallery-page-btn active" data-page="1">Page 1</span>
+                        <span class="gallery-page-btn" data-page="2">Page 2</span>
+                        <span class="gallery-page-btn" data-page="3">Page 3</span>
+                    </div>
+                    <div id="galleryPage1" class="gallery-page-panel active">
+                        <div class="gallery-image-grid" id="galleryGrid1"></div>
+                        <div class="flex justify-end mt-4">
+                            <button class="add-gallery-image bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition" data-page="1"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                    <div id="galleryPage2" class="gallery-page-panel">
+                        <div class="gallery-image-grid" id="galleryGrid2"></div>
+                        <div class="flex justify-end mt-4">
+                            <button class="add-gallery-image bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition" data-page="2"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                    <div id="galleryPage3" class="gallery-page-panel">
+                        <div class="gallery-image-grid" id="galleryGrid3"></div>
+                        <div class="flex justify-end mt-4">
+                            <button class="add-gallery-image bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition" data-page="3"><i class="fas fa-plus-circle mr-1"></i>Add Image</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== About Editor ===== -->
+            <section id="section-about" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-info-circle mr-2"></i>About Page</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Edit the main content of the About page.</p>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Main Heading</label>
+                        <input type="text" id="aboutHeading" value="A progressive municipality in the heart of Antique" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Main Paragraph (HTML allowed)</label>
+                        <textarea id="aboutParagraph" rows="4" class="w-full border rounded-lg px-4 py-2 font-mono">Tobias Fornier (formerly Dao) is a 2nd class municipality in the province of Antique, Philippines. Known for its warm people, rich cultural heritage, and commitment to good governance, we continuously strive for sustainable development and transparent public service.</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Vision</label>
+                        <textarea id="aboutVision" rows="3" class="w-full border rounded-lg px-4 py-2">A self-reliant, progressive, and resilient community with empowered citizens living under transparent, accountable governance by 2030.</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Mission</label>
+                        <textarea id="aboutMission" rows="3" class="w-full border rounded-lg px-4 py-2">To deliver efficient and inclusive public services, promote sustainable development, and uphold the highest standards of transparency and full disclosure.</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Historical Background (HTML allowed)</label>
+                        <textarea id="aboutHistory" rows="10" class="w-full border rounded-lg px-4 py-2 font-mono">[Full historical text – see original about.html]</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Map Embed URL (iframe src)</label>
+                        <input type="url" id="aboutMapEmbed" value="https://maps.google.com/maps?q=Tobias%20Fornier%20Antique&output=embed" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block font-semibold mb-1">Map Link (clickable text)</label>
+                        <input type="url" id="aboutMapLink" value="https://share.google/2UjMMyqK1MM3l3NWN" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Transparency Editor ===== -->
+            <section id="section-transparency" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-file-invoice mr-2"></i>Transparency</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Edit the background image, pledge text, and the three cards.</p>
+                    <div class="mb-6">
+                        <label class="block font-semibold mb-1">Background Image URL</label>
+                        <input type="url" id="transparencyBgImage" value="" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div class="mb-8">
+                        <label class="block font-semibold mb-1">Pledge Paragraph (HTML allowed)</label>
+                        <textarea id="transparencyParagraph" rows="6" class="w-full border rounded-lg px-4 py-2 font-mono"></textarea>
+                    </div>
+                    <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">Transparency Cards</h3>
+                    <div id="transparencyCardsContainer" class="space-y-6"></div>
+                </div>
+            </section>
+
+            <!-- ===== Full Disclosure Policy Editor ===== -->
+            <section id="section-disclosure" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-hand-holding-heart mr-2"></i>Full Disclosure Policy</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the disclosure categories and their year items.</p>
+                    <div id="disclosureCategoriesContainer" class="space-y-4"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addDisclosureCategory" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition">
+                            <i class="fas fa-plus-circle mr-1"></i>Add Category
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Download Forms Editor ===== -->
+            <section id="section-download" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4"><i class="fas fa-download mr-2"></i>Download Forms</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <p class="text-sm text-gray-500 mb-4">Manage the list of downloadable forms. Each form has an icon, title, description, and download link.</p>
+                    <div id="downloadFormsContainer" class="space-y-4"></div>
+                    <div class="flex justify-end mt-6">
+                        <button type="button" id="addDownloadFormBtn" class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-green-200 transition"><i class="fas fa-plus-circle mr-1"></i>Add Form</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== System Settings ===== -->
+            <section id="section-system" class="section">
+                <h2 class="text-3xl font-bold text-[#2e5fa7] mb-4">System Settings</h2>
+                <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                    <h3 class="text-xl font-bold text-[#2e5fa7] mb-4">General System Configuration</h3>
+                    <div class="grid gap-4">
+                        <div><label class="block font-semibold mb-1">Site Maintenance Mode</label>
+                            <select id="maintenanceMode" class="border rounded px-4 py-2 w-full">
+                                <option value="off">Off</option>
+                                <option value="on">On</option>
+                            </select>
+                        </div>
+                        <div><label class="block font-semibold mb-1">Default Language</label>
+                            <select id="defaultLang" class="border rounded px-4 py-2 w-full">
+                                <option value="en">English</option>
+                                <option value="fil">Filipino</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="flex-between mb-4">
+                        <h3 class="text-xl font-bold text-[#2e5fa7]">User Management</h3>
+                        <button id="addUserBtn" class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full"><i class="fas fa-plus-circle mr-1"></i>Add User</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 border-b">
+                                    <th class="px-3 py-2 text-left">Username</th>
+                                    <th class="px-3 py-2 text-left">Email</th>
+                                    <th class="px-3 py-2 text-left">Role</th>
+                                    <th class="px-3 py-2 text-left">Status</th>
+                                    <th class="px-3 py-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- User Modal (hidden by default) -->
+    <div id="userModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+            <h3 class="text-xl font-bold text-[#2e5fa7] mb-4" id="modalTitle">Add User</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username</label>
+                    <input type="text" id="modalUsername" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" id="modalEmail" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Role</label>
+                    <select id="modalRole" class="w-full border rounded-lg px-3 py-2">
+                        <option value="Administrator">Administrator</option>
+                        <option value="Editor">Editor</option>
+                        <option value="Viewer">Viewer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password</label>
+                    <input type="text" id="modalPassword" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Status</label>
+                    <select id="modalStatus" class="w-full border rounded-lg px-3 py-2">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
                 </div>
             </div>
-        </section>
-
-        <!-- NEWS & UPDATES SECTION (dynamic) -->
-        <section id="news-section" class="py-16 bg-gray-50">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" id="newsContainer">
-                <!-- Loading placeholder (shown while fetching) -->
-                <div class="loading-placeholder" id="newsLoading">Loading news...</div>
-            </div>
-        </section>
-    </main>
-
-    <!-- FOOTER (populated by JS) -->
-    <footer class="bg-gray-900 text-gray-300 pt-16 pb-8" id="contact">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid md:grid-cols-4 gap-8" id="footerGrid">
-                <!-- content injected via JavaScript -->
-            </div>
-            <div class="border-t border-gray-800 mt-12 pt-6 text-sm text-center flex flex-col md:flex-row justify-between">
-                <span>© Municipality of Tobias Fornier. All rights reserved.</span>
-                <span>Powered by LGU IT Unit <i class="fas fa-heart text-[#2e5fa7] mx-1"></i></span>
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="modalCancel" class="px-4 py-2 border rounded-lg hover:bg-gray-100">Cancel</button>
+                <button id="modalSave" class="px-4 py-2 bg-[#2e5fa7] text-white rounded-lg hover:bg-[#1e3f7a]">Save</button>
             </div>
         </div>
-    </footer>
+    </div>
 
-    <!-- Video Modal (unchanged) -->
-    <div class="video-modal" id="videoModal">...</div>
-
-    <!-- Include Search Index (still static) -->
-    <script src="js/search-index.js"></script>
-
-    <!-- JavaScript: Supabase data fetching + rendering (updated) -->
-    <script>
-        (async function() {
-            console.log('Index page starting...');
-
-            // ---------- Dark Mode Toggle (unchanged) ----------
-            const themeToggle = document.getElementById('themeToggle');
-            const themeIcon = document.getElementById('themeIcon');
-            const body = document.body;
-
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                body.classList.add('dark-mode');
-                themeIcon.classList.remove('fa-sun');
-                themeIcon.classList.add('fa-moon');
-            } else {
-                themeIcon.classList.add('fa-sun');
-            }
-
-            themeToggle.addEventListener('click', () => {
-                body.classList.toggle('dark-mode');
-                if (body.classList.contains('dark-mode')) {
-                    themeIcon.classList.remove('fa-sun');
-                    themeIcon.classList.add('fa-moon');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    themeIcon.classList.remove('fa-moon');
-                    themeIcon.classList.add('fa-sun');
-                    localStorage.setItem('theme', 'light');
-                }
-            });
-
-            // ---------- Live Date & Time ----------
-            function updateDateTime() {
-                const now = new Date();
-                const options = { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                };
-                const dateTimeStr = now.toLocaleDateString('en-US', options);
-                const headerDateTime = document.getElementById('headerDateTime');
-                if (headerDateTime) headerDateTime.textContent = dateTimeStr;
-            }
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-
-            // ---------- Check Supabase client ----------
-            if (!window.supabase || !window.supabase.from) {
-                console.error('Supabase client not available');
-                document.getElementById('newsLoading').textContent = 'Error: Could not connect to database. Please refresh.';
-                return;
-            }
-            const supabase = window.supabase;
-
-            // ---------- Fetch all data from Supabase ----------
-            let siteData = {
-                site: { logo: '', name: 'Municipality of Tobias Fornier' },
-                hero: { slides: [] },
-                newsCategories: {},
-                social: [],
-                footer: {}
-            };
-
-            try {
-                console.log('Fetching site settings...');
-                const { data: settings, error: settingsError } = await supabase
-                    .from('site_settings')
-                    .select('*')
-                    .eq('id', 1)
-                    .single();
-
-                if (!settingsError && settings) {
-                    siteData.site.logo = settings.logo_url || '';
-                    siteData.site.name = settings.site_name || siteData.site.name;
-                    siteData.social = settings.social_links || [];
-                    siteData.footer = settings.footer_data || {};
-                } else {
-                    console.warn('Site settings not found, using defaults', settingsError);
-                }
-
-                console.log('Fetching hero slides...');
-                const { data: heroSlides, error: heroError } = await supabase
-                    .from('hero_slides')
-                    .select('image_url')
-                    .order('sort_order');
-                if (!heroError && heroSlides) {
-                    siteData.hero.slides = heroSlides.map(s => s.image_url);
-                } else {
-                    console.warn('Hero slides not found, using defaults', heroError);
-                }
-
-                console.log('Fetching news categories and items...');
-                const { data: categories, error: catError } = await supabase
-                    .from('news_categories')
-                    .select('id, name, type')
-                    .order('sort_order');
-
-                if (!catError && categories) {
-                    for (const cat of categories) {
-                        const { data: items, error: itemError } = await supabase
-                            .from('news_items')
-                            .select('*')
-                            .eq('category_id', cat.id)
-                            .order('sort_order');
-                        if (!itemError && items) {
-                            siteData.newsCategories[cat.name] = items.map(item => ({
-                                title: item.title,
-                                subtitle: item.subtitle,
-                                desc: item.description,
-                                author: item.author,
-                                readTime: item.read_time,
-                                timestamp: item.timestamp,
-                                link: item.link,
-                                image: item.image_url,
-                                videoSrc: item.video_src,
-                                duration: item.duration
-                            }));
-                        } else {
-                            siteData.newsCategories[cat.name] = [];
-                        }
-                    }
-                } else {
-                    console.warn('No news categories found, using empty', catError);
-                }
-            } catch (e) {
-                console.error('Fatal error during fetch:', e);
-                // Fallback to hardcoded defaults for demo
-                siteData.hero.slides = [
-                    "https://images.unsplash.com/photo-1508873696983-2dfd5898f08b?w=1600&q=80",
-                    "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=1600&q=80",
-                    "https://images.unsplash.com/photo-1564419320467-68788cdc6d7c?w=1600&q=80"
-                ];
-                siteData.newsCategories = {
-                    "🏀 Municipal Announcement & News Updates": [
-                        { title: "OLYMPICS 2024", subtitle: "Team Philippines gears up for Paris 2024", desc: "Athletes from Tobias Fornier join national pool as Olympics approach. Exclusive coverage and interviews.", author: "", readTime: "5 min read", timestamp: "2 hours ago", image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&q=80", link: "#" },
-                        { title: "TAEKWONDO", subtitle: "Local jin wins gold in national qualifiers", desc: "", author: "", readTime: "3 min read", timestamp: "", image: "https://images.unsplash.com/photo-1552674605-db6a2e3d7a2c?w=400&q=80", link: "#" },
-                        { title: "WRESTLING", subtitle: "Team Tobias Fornier trains in Baguio", desc: "", author: "", readTime: "4 min read", timestamp: "", image: "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?w=400&q=80", link: "#" }
-                    ],
-                    "✨ Municipal Agriculture Featured Stories": [
-                        { title: "BASKETBALL", subtitle: "Mayor's Cup tips off", desc: "16 teams battle for championship", author: "M. Santos", readTime: "5 min", timestamp: "", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&q=80", link: "#" },
-                        { title: "SWIMMING", subtitle: "New pool complex opens", desc: "Olympic-size pool now operational", author: "L. Gomez", readTime: "3 min", timestamp: "", image: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&q=80", link: "#" },
-                        { title: "GYMNASTICS", subtitle: "Junior athletes excel", desc: "5 medals in regional meet", author: "R. Fernandez", readTime: "4 min", timestamp: "", image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&q=80", link: "#" }
-                    ],
-                    "📰 Provincial Health Latest Articles": [
-                        { title: "New training facility for athletics", subtitle: "", desc: "", author: "J. Dela Cruz", readTime: "3 min", timestamp: "2h ago", image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&q=80", link: "#" },
-                        { title: "Wrestling clinic conducted", subtitle: "", desc: "", author: "M. Reyes", readTime: "4 min", timestamp: "5h ago", image: "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?w=400&q=80", link: "#" },
-                        { title: "Gymnastics exhibition draws crowd", subtitle: "", desc: "", author: "A. Santos", readTime: "5 min", timestamp: "1d ago", image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&q=80", link: "#" },
-                        { title: "Taekwondo team to Korea", subtitle: "", desc: "", author: "C. Lim", readTime: "4 min", timestamp: "2d ago", image: "https://images.unsplash.com/photo-1552674605-db6a2e3d7a2c?w=400&q=80", link: "#" }
-                    ],
-                    "🎥 Video News Highlights": [
-                        { title: "BASKETBALL · 12:34", duration: "12:34", image: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=600&q=80", videoSrc: "" },
-                        { title: "Swim meet recap", duration: "3:45", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&q=80", videoSrc: "" },
-                        { title: "Track & field", duration: "7:20", image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&q=80", videoSrc: "" },
-                        { title: "Swim meet recap", duration: "3:45", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&q=80", videoSrc: "" },
-                        { title: "Track & field", duration: "7:20", image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&q=80", videoSrc: "" }
-                    ],
-                    "📸 Municipality Gallery": [
-                        { image: "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=600&q=80" },
-                        { image: "https://images.unsplash.com/photo-1523908511403-7fc7b25592f4?w=600&q=80" },
-                        { image: "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=600&q=80" },
-                        { image: "https://images.unsplash.com/photo-1564419320467-68788cdc6d7c?w=600&q=80" }
-                    ],
-                    "🏀 Inter Barangay Basketball News": [
-                        { title: "Barangay league finals set", subtitle: "", desc: "", author: "J. Mendoza", readTime: "3 min read", timestamp: "", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&q=80", link: "#" },
-                        { title: "3x3 tournament registration", subtitle: "", desc: "", author: "R. Salazar", readTime: "2 min read", timestamp: "", image: "https://images.unsplash.com/photo-1505666284772-5f9c7a1b1094?w=600&q=80", link: "#" },
-                        { title: "Youth basketball clinic", subtitle: "", desc: "", author: "T. Reyes", readTime: "4 min read", timestamp: "", image: "https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=600&q=80", link: "#" }
-                    ]
-                };
-            }
-
-            console.log('Data fetched:', siteData);
-
-            // ---------- Update Header ----------
-            const siteNameSpan = document.getElementById('siteNameText');
-            const logoImg = document.getElementById('siteLogo');
-            if (siteNameSpan && siteData.site.name) {
-                siteNameSpan.textContent = siteData.site.name;
-            }
-            if (logoImg && siteData.site.logo) {
-                logoImg.src = siteData.site.logo;
-                logoImg.classList.remove('hidden');
-            } else {
-                logoImg.classList.add('hidden');
-            }
-
-            // ---------- Render Social Sidebar ----------
-            const socialSidebar = document.querySelector('.social-sidebar');
-            if (socialSidebar) {
-                socialSidebar.innerHTML = '';
-                (siteData.social || []).forEach(item => {
-                    const a = document.createElement('a');
-                    a.href = item.url;
-                    a.target = '_blank';
-                    a.setAttribute('aria-label', item.icon.replace('-f', ''));
-                    a.innerHTML = `<i class="fab fa-${item.icon}"></i>`;
-                    socialSidebar.appendChild(a);
-                });
-            }
-
-            // ---------- Render Footer ----------
-            function renderFooter() {
-                const footerGrid = document.getElementById('footerGrid');
-                if (!footerGrid) return;
-
-                const footerData = siteData.footer || {
-                    connect: {
-                        addressLine1: 'Poblacion, Tobias Fornier, Antique',
-                        addressLine2: 'Philippines 5716',
-                        email: 'tobiasfornier@gmail.com',
-                        phone: '(036) 123-4567'
-                    },
-                    quickLinks: [
-                        { text: 'Home', url: '#home' },
-                        { text: 'About', url: 'about.html' },
-                        { text: 'Transparency', url: 'transparency.html' },
-                        { text: 'Full Disclosure', url: 'disclosurepolicy.html' },
-                        { text: 'LGU Offices', url: '#offices' }
-                    ],
-                    hotlines: [
-                        { title: 'PDRRMO', phone1: '(042) 710-3933', phone2: '0946-274-8706' },
-                        { title: 'Quezon Police Provincial Office', phone1: '0920-979-6911', phone2: '0915-789-3115' },
-                        { title: 'Bureau of Fire Department', phone1: '(042) 797-2320', phone2: '(042) 710-0110' }
-                    ],
-                    agencies: [
-                        { image: 'https://via.placeholder.com/40?text=PNP', label: 'Philippine National Police (PNP)' },
-                        { image: 'https://via.placeholder.com/40?text=BFP', label: 'Bureau of Fire Protection' },
-                        { image: 'https://via.placeholder.com/40?text=BFD', label: 'Bureau of Fire Department' },
-                        { image: 'https://via.placeholder.com/40?text=Legal', label: 'Municipal Legal Office' },
-                        { image: 'https://via.placeholder.com/40?text=Health', label: 'Municipal Health Office' }
-                    ]
-                };
-
-                function createCol(html) {
-                    const div = document.createElement('div');
-                    div.innerHTML = html;
-                    return div;
-                }
-
-                // Column 1: CONNECT
-                const connectCol = createCol(`
-                    <h3 class="text-2xl font-bold text-white"><i class="fas fa-globe mr-2 text-[#2e5fa7]"></i>CONNECT</h3>
-                    <div class="flex gap-4 mt-4 text-2xl" id="footer-social"></div>
-                    <address class="not-italic text-sm mt-4 leading-relaxed">
-                        ${footerData.connect.addressLine1}<br>
-                        ${footerData.connect.email}<br>
-                        ${footerData.connect.addressLine2}<br>
-                        Phone: ${footerData.connect.phone}
-                    </address>
-                `);
-
-                // Column 2: Quick Links
-                const quickLinksHtml = footerData.quickLinks.map(link =>
-                    `<li><a href="${link.url}" class="hover:text-white transition">${link.text}</a></li>`
-                ).join('');
-                const quickLinksCol = createCol(`
-                    <h4 class="font-semibold text-white text-lg">Quick Links</h4>
-                    <ul class="mt-4 space-y-2 text-sm">
-                        ${quickLinksHtml}
-                    </ul>
-                `);
-
-                // Column 3: Emergency Hotlines
-                const hotlinesHtml = footerData.hotlines.map(h =>
-                    `<div><span class="font-semibold">${h.title}</span><br>${h.phone1}<br>${h.phone2}</div>`
-                ).join('');
-                const hotlinesCol = createCol(`
-                    <h4 class="font-semibold text-white text-lg">EMERGENCY HOTLINE</h4>
-                    <div class="mt-4 text-sm space-y-4">
-                        ${hotlinesHtml}
-                    </div>
-                `);
-
-                // Column 4: Municipality Agencies
-                const agenciesHtml = footerData.agencies.map(a =>
-                    `<div class="flex flex-col items-center">
-                        <img src="${a.image || 'https://via.placeholder.com/40?text=Logo'}" alt="${a.label}" class="w-10 h-10 object-contain mb-1">
-                        <span class="text-xs text-center">${a.label}</span>
-                    </div>`
-                ).join('');
-                const agenciesCol = createCol(`
-                    <h4 class="font-semibold text-white text-lg">Municipality AGENCIES</h4>
-                    <div class="grid grid-cols-3 gap-4 mt-4">
-                        ${agenciesHtml}
-                    </div>
-                `);
-
-                footerGrid.innerHTML = '';
-                footerGrid.appendChild(connectCol);
-                footerGrid.appendChild(quickLinksCol);
-                footerGrid.appendChild(hotlinesCol);
-                footerGrid.appendChild(agenciesCol);
-
-                // Footer social icons (first 3 from social data)
-                const footerSocial = document.getElementById('footer-social');
-                if (footerSocial) {
-                    footerSocial.innerHTML = '';
-                    (siteData.social || []).slice(0, 3).forEach(item => {
-                        const a = document.createElement('a');
-                        a.href = item.url;
-                        a.className = 'hover:text-white transition';
-                        a.innerHTML = `<i class="fab fa-${item.icon}"></i>`;
-                        footerSocial.appendChild(a);
-                    });
-                }
-            }
-            renderFooter();
-
-            // ---------- Render Hero Slider ----------
-            function renderHero() {
-                const heroSection = document.getElementById('home');
-                const existingSlides = heroSection.querySelectorAll('.slider-slide');
-                existingSlides.forEach(s => s.remove());
-
-                const slides = siteData.hero.slides.length ? siteData.hero.slides : [
-                    "https://images.unsplash.com/photo-1508873696983-2dfd5898f08b?w=1600&q=80",
-                    "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=1600&q=80",
-                    "https://images.unsplash.com/photo-1564419320467-68788cdc6d7c?w=1600&q=80"
-                ];
-                slides.forEach((src, index) => {
-                    const slide = document.createElement('div');
-                    slide.className = `slider-slide absolute inset-0 w-full h-full bg-cover bg-center`;
-                    slide.style.backgroundImage = `url('${src}')`;
-                    slide.style.opacity = index === 0 ? '1' : '0';
-                    slide.id = `slide${index+1}`;
-                    heroSection.insertBefore(slide, heroSection.querySelector('.gradient-overlay-blue'));
-                });
-
-                if (window.sliderInterval) clearInterval(window.sliderInterval);
-                const slidesElements = heroSection.querySelectorAll('.slider-slide');
-                if (slidesElements.length > 0) {
-                    let current = 0;
-                    window.sliderInterval = setInterval(() => {
-                        slidesElements[current].style.opacity = '0';
-                        current = (current + 1) % slidesElements.length;
-                        slidesElements[current].style.opacity = '1';
-                    }, 5000);
-                }
-            }
-            renderHero();
-
-            // ---------- Render News (with fallback for empty categories) ----------
-            function renderNews() {
-                const container = document.getElementById('newsContainer');
-                const loadingEl = document.getElementById('newsLoading');
-                if (loadingEl) loadingEl.style.display = 'none';
-
-                const cat = siteData.newsCategories;
-
-                // Helper to get array or empty
-                const get = (name) => (cat[name] && Array.isArray(cat[name])) ? cat[name] : [];
-
-                const mainItems = get("🏀 Municipal Announcement & News Updates");
-                const heroArticle = mainItems[0] || { image: '', title: '', desc: '', readTime: '', timestamp: '', link: '#' };
-                const sideArticles = mainItems.slice(1, 4) || [];
-
-                const featured = get("✨ Municipal Agriculture Featured Stories").slice(0,3);
-                const latest = get("📰 Provincial Health Latest Articles").slice(0,4);
-                const videoItems = get("🎥 Video News Highlights");
-                const videoMain = videoItems[0] || { image: '', duration: '', title: '', videoSrc: '' };
-                const videoSmall = videoItems.slice(1, 5) || [];
-                const galleryItems = get("📸 Municipality Gallery").slice(0,4);
-                const basketballItems = get("🏀 Inter Barangay Basketball News").slice(0,3);
-
-                let html = '';
-
-                // Only show sections if there is at least one item
-                if (mainItems.length > 0) {
-                    html += `<h2 class="text-4xl font-bold text-gray-800 mb-8 border-l-8 border-[#2e5fa7] pl-4">🏀 Municipal Announcement & News Updates</h2>`;
-                    html += `<div class="grid lg:grid-cols-3 gap-6 mb-12">`;
-                    html += `<div class="lg:col-span-2 bg-white rounded-2xl overflow-hidden shadow-lg news-hover-card">`;
-                    html += `<img src="${heroArticle.image}" alt="${heroArticle.title}" class="w-full h-80 object-cover">`;
-                    html += `<div class="p-6">`;
-                    html += `<span class="text-xs font-semibold bg-[#2e5fa7] text-white px-3 py-1 rounded-full">NEWS</span>`;
-                    html += `<h3 class="text-3xl font-bold mt-3 mb-2">${heroArticle.title}</h3>`;
-                    html += `<p class="text-gray-600 text-sm mb-3">${heroArticle.desc || ''}</p>`;
-                    html += `<div class="flex items-center text-xs text-gray-500 gap-3">`;
-                    html += `<a href="${heroArticle.link}" class="text-[#2e5fa7] font-medium hover:underline">Read more</a>`;
-                    html += ` ${heroArticle.readTime || ''} · ${heroArticle.timestamp || ''}`;
-                    html += `</div></div></div>`;
-                    html += `<div class="space-y-6">`;
-                    sideArticles.forEach(side => {
-                        html += `<div class="bg-white rounded-xl overflow-hidden shadow flex news-hover-card">`;
-                        html += `<img src="${side.image}" class="w-24 h-24 object-cover" alt="${side.title}">`;
-                        html += `<div class="p-3 flex-1">`;
-                        html += `<h4 class="font-bold text-sm">${side.title}</h4>`;
-                        html += `<p class="text-gray-600 text-xs mt-1">${side.subtitle || ''}</p>`;
-                        html += `<div class="flex items-center text-xs text-gray-500 mt-2">`;
-                        html += `<a href="${side.link}" class="text-[#2e5fa7] font-medium hover:underline">Read more</a>`;
-                        html += ` ${side.readTime || ''}`;
-                        html += `</div></div></div>`;
-                    });
-                    html += `</div></div>`;
-                }
-
-                if (featured.length > 0) {
-                    html += `<h3 class="text-2xl font-bold mb-5">✨ Municipal Agriculture Featured Stories</h3>`;
-                    html += `<div class="grid md:grid-cols-3 gap-6 mb-12">`;
-                    featured.forEach(f => {
-                        html += `<div class="bg-white rounded-xl shadow-md overflow-hidden news-hover-card">`;
-                        html += `<img src="${f.image}" class="h-44 w-full object-cover" alt="${f.title}">`;
-                        html += `<div class="p-4">`;
-                        html += `<h4 class="font-bold">${f.title}</h4>`;
-                        html += `<p class="text-sm text-gray-500 mt-1">${f.desc || ''}</p>`;
-                        html += `<div class="flex justify-between mt-3 text-xs">`;
-                        html += `<span><a href="${f.link}" class="text-[#2e5fa7] font-medium hover:underline">Read more</a></span>`;
-                        html += `<span class="text-gray-400">by ${f.author || ''}</span>`;
-                        html += `</div></div></div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                if (latest.length > 0) {
-                    html += `<h3 class="text-2xl font-bold mb-5">📰 Provincial Health Latest Articles</h3>`;
-                    html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">`;
-                    latest.forEach(art => {
-                        html += `<div class="bg-white rounded-xl shadow-md p-4 news-hover-card">`;
-                        html += `<img src="${art.image}" class="h-32 w-full object-cover rounded-lg">`;
-                        html += `<h4 class="font-bold mt-2">${art.title}</h4>`;
-                        html += `<div class="flex items-center text-xs text-gray-500 mt-2">`;
-                        html += `<i class="fas fa-user mr-1"></i> ${art.author || ''} · `;
-                        html += `<a href="${art.link}" class="text-[#2e5fa7] font-medium hover:underline ml-1">Read more</a> · `;
-                        html += `${art.timestamp || ''} · ${art.readTime || ''}`;
-                        html += `</div></div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                if (videoItems.length > 0 || galleryItems.length > 0) {
-                    html += `<div class="grid md:grid-cols-2 gap-8 mt-12">`;
-                    if (videoItems.length > 0) {
-                        html += `<div><h3 class="text-2xl font-bold mb-4">🎥 Video News Highlights</h3>`;
-                        html += `<div class="space-y-4">`;
-                        html += `<div class="relative rounded-xl overflow-hidden shadow-md news-hover-card">`;
-                        html += `<img src="${videoMain.image}" class="h-48 w-full object-cover">`;
-                        html += `<div class="absolute inset-0 bg-black/20 flex items-center justify-center">`;
-                        html += `<div class="play-icon-overlay video-play-btn" data-video-src="${videoMain.videoSrc || ''}"><i class="fas fa-play"></i></div>`;
-                        html += `</div>`;
-                        html += `<div class="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 text-xs rounded">${videoMain.duration || ''}</div>`;
-                        html += `<div class="p-3 bg-white"><h4 class="font-bold">${videoMain.title}</h4></div>`;
-                        html += `</div>`;
-                        if (videoSmall.length > 0) {
-                            html += `<div class="grid grid-cols-2 gap-3">`;
-                            videoSmall.forEach(v => {
-                                html += `<div class="relative">`;
-                                html += `<img src="${v.image}" class="h-24 w-full object-cover rounded-lg">`;
-                                html += `<div class="absolute inset-0 bg-black/30 flex items-center justify-center">`;
-                                html += `<div class="video-play-btn text-white text-xl" data-video-src="${v.videoSrc || ''}"><i class="fas fa-play"></i></div>`;
-                                html += `</div>`;
-                                html += `<span class="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 rounded">${v.duration || ''}</span>`;
-                                html += `<p class="text-sm font-semibold mt-1">${v.title}</p>`;
-                                html += `</div>`;
-                            });
-                            html += `</div>`;
-                        }
-                        html += `</div></div>`;
-                    }
-
-                    if (galleryItems.length > 0) {
-                        html += `<div><h3 class="text-2xl font-bold mb-4">📸 Municipality Gallery</h3>`;
-                        html += `<div class="bento-grid">`;
-                        if (galleryItems.length >= 4) {
-                            html += `<div class="bento-item large"><img src="${galleryItems[0].image}" alt="Gallery"></div>`;
-                            html += `<div class="bento-item tall"><img src="${galleryItems[1].image}" alt="Gallery"></div>`;
-                            html += `<div class="bento-item"><img src="${galleryItems[2].image}" alt="Gallery"></div>`;
-                            html += `<div class="bento-item wide"><img src="${galleryItems[3].image}" alt="Gallery"></div>`;
-                        } else {
-                            galleryItems.forEach(img => {
-                                html += `<div class="bento-item"><img src="${img.image}" alt="Gallery"></div>`;
-                            });
-                        }
-                        html += `</div>`;
-                        html += `<a href="gallery.html" class="text-[#2e5fa7] font-medium hover:underline mt-2 inline-block">View more</a>`;
-                        html += `</div>`;
-                    }
-                    html += `</div>`;
-                }
-
-                if (basketballItems.length > 0) {
-                    html += `<h3 class="text-2xl font-bold mt-12 mb-5">🏀 Inter Barangay Basketball News</h3>`;
-                    html += `<div class="grid md:grid-cols-3 gap-6">`;
-                    basketballItems.forEach(b => {
-                        html += `<div class="bg-white rounded-xl shadow-md overflow-hidden news-hover-card">`;
-                        html += `<img src="${b.image}" class="h-40 w-full object-cover">`;
-                        html += `<div class="p-4">`;
-                        html += `<h4 class="font-bold">${b.title}</h4>`;
-                        html += `<div class="flex items-center text-xs text-gray-500 mt-2">`;
-                        html += `<i class="fas fa-user mr-1"></i> ${b.author || ''} · `;
-                        html += `<a href="${b.link}" class="text-[#2e5fa7] font-medium hover:underline ml-1">Read more</a>`;
-                        html += `</div></div></div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                if (html === '') {
-                    html = '<p class="text-center text-gray-500 py-8">No news available at the moment.</p>';
-                }
-
-                container.innerHTML = html;
-
-                // Attach video play buttons
-                document.querySelectorAll('.video-play-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const src = btn.dataset.videoSrc;
-                        window.playVideo(src);
-                    });
-                });
-            }
-            renderNews();
-
-            // ---------- Video Modal (same as before) ----------
-            const modal = document.getElementById('videoModal');
-            const closeBtn = document.getElementById('closeVideoModal');
-            const modalVideo = document.getElementById('modalVideo');
-            const modalIframe = document.getElementById('modalIframe');
-
-            function closeModal() {
-                modal.classList.remove('active');
-                modalVideo.pause();
-                modalVideo.src = '';
-                modalIframe.src = '';
-                modalVideo.style.display = 'none';
-                modalIframe.style.display = 'none';
-            }
-
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-            if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-            window.playVideo = function(src) {
-                if (!src) { alert('No video source set for this item.'); return; }
-
-                const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-                const match = src.match(ytRegex);
-
-                if (match) {
-                    const videoId = match[1];
-                    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
-                    modalIframe.src = embedUrl;
-                    modalVideo.style.display = 'none';
-                    modalIframe.style.display = 'block';
-                } else {
-                    modalVideo.src = src;
-                    modalVideo.load();
-                    modalVideo.style.display = 'block';
-                    modalIframe.style.display = 'none';
-                }
-                
-                modal.classList.add('active');
-                
-                if (!match) {
-                    modalVideo.play().catch(e => console.log('Autoplay prevented:', e));
-                }
-            };
-
-            // ---------- Mobile Hamburger Menu (unchanged) ----------
-            const hamburger = document.getElementById('hamburgerBtn');
-            const overlay = document.getElementById('mobileDrawerOverlay');
-            const panel = document.getElementById('mobileDrawerPanel');
-
-            if (hamburger && overlay) {
-                hamburger.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    overlay.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                });
-
-                overlay.addEventListener('click', (e) => {
-                    if (e.target === overlay) {
-                        overlay.classList.remove('active');
-                        document.body.style.overflow = '';
-                    }
-                });
-
-                panel.querySelectorAll('a').forEach(link => {
-                    link.addEventListener('click', () => {
-                        overlay.classList.remove('active');
-                        document.body.style.overflow = '';
-                    });
-                });
-
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && overlay.classList.contains('active')) {
-                        overlay.classList.remove('active');
-                        document.body.style.overflow = '';
-                    }
-                });
-            }
-
-            // ---------- Dropdown toggles for mobile menu ----------
-            function initMobileDropdowns() {
-                const dropdownParents = document.querySelectorAll('#mobileDrawerPanel .dropdown-parent');
-                dropdownParents.forEach(parent => {
-                    parent.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const targetId = this.dataset.target;
-                        const submenu = document.getElementById(targetId);
-                        if (submenu) {
-                            submenu.classList.toggle('open');
-                            const icon = this.querySelector('i');
-                            if (icon) {
-                                icon.style.transform = submenu.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
-                            }
-                        }
-                    });
-                });
-            }
-            initMobileDropdowns();
-
-            // ---------- Sticky Header Shadow ----------
-            function initHeaderScroll() {
-                const header = document.getElementById('mainHeader');
-                const scrollHandler = () => header.classList.toggle('scrolled', window.scrollY > 20);
-                window.removeEventListener('scroll', scrollHandler);
-                window.addEventListener('scroll', scrollHandler);
-            }
-            initHeaderScroll();
-
-            // ---------- Smooth Scroll for anchor links ----------
-            function initSmoothScroll() {
-                document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                    anchor.removeEventListener('click', smoothScroll);
-                    anchor.addEventListener('click', smoothScroll);
-                });
-                function smoothScroll(e) {
-                    const href = this.getAttribute('href');
-                    if (href === "#") return;
-                    const target = document.querySelector(href);
-                    if (target) {
-                        e.preventDefault();
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }
-            }
-            initSmoothScroll();
-
-            // ---------- Search function: redirect to search.html ----------
-            function performSearch(inputElement) {
-                const query = inputElement.value.trim();
-                if (query) {
-                    window.location.href = `search.html?q=${encodeURIComponent(query)}`;
-                }
-            }
-
-            // Desktop search
-            const desktopSearchInput = document.getElementById('desktopSearchInput');
-            const desktopSearchButton = document.querySelector('.desktop-search-btn');
-            if (desktopSearchInput && desktopSearchButton) {
-                desktopSearchButton.addEventListener('click', () => performSearch(desktopSearchInput));
-                desktopSearchInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        performSearch(desktopSearchInput);
-                    }
-                });
-            }
-
-            // Mobile search
-            const mobileSearchInput = document.getElementById('mobileSearchInput');
-            const mobileSearchButton = document.getElementById('mobileSearchBtn');
-            if (mobileSearchInput && mobileSearchButton) {
-                mobileSearchButton.addEventListener('click', () => performSearch(mobileSearchInput));
-                mobileSearchInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        performSearch(mobileSearchInput);
-                    }
-                });
-            }
-
-            // Modal functionality (directory) – unchanged
-            const modalDir = document.getElementById('directoryModal');
-            const closeModalBtn = document.getElementById('closeModalBtn');
-            const govKeyOfficials = document.getElementById('govKeyOfficials');
-            if (govKeyOfficials && modalDir) {
-                govKeyOfficials.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    modalDir.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                });
-            }
-            if (closeModalBtn) {
-                closeModalBtn.addEventListener('click', () => {
-                    modalDir.classList.remove('active');
-                    document.body.style.overflow = '';
-                });
-            }
-            const tabElected = document.getElementById('tabElected');
-            const tabDept = document.getElementById('tabDept');
-            const paneElected = document.getElementById('paneElected');
-            const paneDept = document.getElementById('paneDept');
-            if (tabElected && tabDept) {
-                tabElected.addEventListener('click', () => {
-                    tabElected.classList.add('active');
-                    tabDept.classList.remove('active');
-                    paneElected.classList.add('active');
-                    paneDept.classList.remove('active');
-                });
-                tabDept.addEventListener('click', () => {
-                    tabDept.classList.add('active');
-                    tabElected.classList.remove('active');
-                    paneDept.classList.add('active');
-                    paneElected.classList.remove('active');
-                });
-            }
-            if (modalDir) {
-                modalDir.addEventListener('click', (e) => {
-                    if (e.target === modalDir) {
-                        modalDir.classList.remove('active');
-                        document.body.style.overflow = '';
-                    }
-                });
-            }
-        })();
-    </script>
+    <script src="js/admin.js"></script>
 </body>
 </html>
