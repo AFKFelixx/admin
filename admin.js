@@ -1,8 +1,18 @@
+// admin.js – Complete version with all render functions
 (function() {
     // ---------- Login redirect ----------
     if (sessionStorage.getItem('loggedIn') !== 'true') {
         window.location.href = 'Admin-Login.html';
-        return; // stop further execution
+        return;
+    }
+
+    // ---------- Supabase client ----------
+    const supabase = window.supabase;
+    if (!supabase || !supabase.from) {
+        console.error('Supabase client not available');
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.body.innerHTML = '<div class="p-8 text-red-600">Supabase client not loaded. Check your supabase-client.js file.</div>';
+        return;
     }
 
     // ---------- Helper functions ----------
@@ -25,7 +35,9 @@
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                    }, 'image/jpeg', quality);
                 };
                 img.onerror = reject;
             };
@@ -33,13 +45,17 @@
         });
     }
 
-    function fileToDataURL(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
+    async function uploadImage(file, folder = 'general') {
+        if (!file) return '';
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const filePath = `${folder}/${fileName}`;
+        const { error } = await supabase.storage.from('cms-images').upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) {
+            console.error('Upload error:', error);
+            return '';
+        }
+        const { data: { publicUrl } } = supabase.storage.from('cms-images').getPublicUrl(filePath);
+        return publicUrl;
     }
 
     function escapeHtml(unsafe) {
@@ -53,60 +69,9 @@
         });
     }
 
-    // ---------- Load saved data ----------
-    let savedData = {};
-    try {
-        savedData = JSON.parse(localStorage.getItem('tobiasFornierCMS') || '{}');
-    } catch (e) {}
+    const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-    // ---------- Sidebar collapse/expand ----------
-    const sidebar = document.getElementById('mainSidebar');
-    const toggleBtn = document.getElementById('sidebarToggle');
-    const sidebarState = localStorage.getItem('sidebarCollapsed') === 'true';
-    if (sidebarState) {
-        sidebar.classList.add('collapsed');
-    }
-    toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    });
-
-    // ---------- Tab Switching (main sidebar) ----------
-    document.querySelectorAll('.sidebar-item').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const sectionId = this.dataset.section;
-
-            // Logout redirect
-            if (sectionId === 'logout') {
-                sessionStorage.removeItem('loggedIn');
-                sessionStorage.removeItem('currentUser');
-                window.location.href = 'Admin-Login.html';
-                return;
-            }
-
-            document.querySelectorAll('.sidebar-item').forEach(l => l.classList.remove('active'));
-            this.classList.add('active');
-            const target = document.getElementById(`section-${sectionId}`);
-            if (target) {
-                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                target.classList.add('active');
-            }
-        });
-    });
-
-    // ---------- General subnav ----------
-    document.querySelectorAll('.subnav-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const target = this.dataset.subtarget;
-            document.querySelectorAll('.general-subsection').forEach(sub => sub.classList.remove('active-subsection'));
-            document.getElementById(`subsection-${target}`).classList.add('active-subsection');
-            document.querySelectorAll('.subnav-item').forEach(i => i.classList.remove('active-sub'));
-            this.classList.add('active-sub');
-        });
-    });
-
-    // ---------- Live Date & Time (fixed) ----------
+    // ---------- Live Date & Time ----------
     function updateDateTime() {
         const now = new Date();
         const options = { 
@@ -125,22 +90,232 @@
     updateDateTime();
     setInterval(updateDateTime, 1000);
 
-    // ========== GENERAL SETTINGS ==========
+    // ---------- Sidebar collapse ----------
+    const sidebar = document.getElementById('mainSidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const sidebarState = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (sidebarState) sidebar.classList.add('collapsed');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+
+    // ---------- Tab switching (main sidebar) ----------
+    document.querySelectorAll('.sidebar-item').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sectionId = this.dataset.section;
+            if (sectionId === 'logout') {
+                sessionStorage.removeItem('loggedIn');
+                sessionStorage.removeItem('currentUser');
+                window.location.href = 'Admin-Login.html';
+                return;
+            }
+            document.querySelectorAll('.sidebar-item').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            const target = document.getElementById(`section-${sectionId}`);
+            if (target) {
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                target.classList.add('active');
+            }
+        });
+    });
+
+    // ---------- General subnav ----------
+    document.querySelectorAll('.subnav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const target = this.dataset.subtarget;
+            document.querySelectorAll('.general-subsection').forEach(sub => sub.classList.remove('active-subsection'));
+            const subsection = document.getElementById(`subsection-${target}`);
+            if (subsection) subsection.classList.add('active-subsection');
+            document.querySelectorAll('.subnav-item').forEach(i => i.classList.remove('active-sub'));
+            this.classList.add('active-sub');
+        });
+    });
+
+    // ---------- Global state ----------
+    let siteData = {};
+
+    // ---------- Load all data from Supabase ----------
+    async function loadAllData() {
+        try {
+            const [
+                { data: settings },
+                { data: heroSlides },
+                { data: newsCategories },
+                { data: newsItems },
+                { data: officials },
+                { data: profileSections },
+                { data: lguOffices },
+                { data: ligaPunong },
+                { data: ligaSk },
+                { data: tourismSections },
+                { data: tourismImages },
+                { data: culturalPlan },
+                { data: spesBeneficiaries },
+                { data: pesoImages },
+                { data: galleryImages },
+                { data: aboutContent },
+                { data: transparencyCards },
+                { data: disclosureCategories },
+                { data: disclosureYears },
+                { data: downloadForms },
+                { data: users }
+            ] = await Promise.all([
+                supabase.from('site_settings').select('*').eq('id', 1).single(),
+                supabase.from('hero_slides').select('*').order('sort_order'),
+                supabase.from('news_categories').select('*').order('sort_order'),
+                supabase.from('news_items').select('*, news_categories(name)').order('sort_order'),
+                supabase.from('officials').select('*').order('sort_order'),
+                supabase.from('profile_sections').select('*').order('sort_order'),
+                supabase.from('lgu_offices').select('*').order('sort_order'),
+                supabase.from('liga_punong').select('*').order('sort_order'),
+                supabase.from('liga_sk').select('*').order('sort_order'),
+                supabase.from('tourism_sections').select('*'),
+                supabase.from('tourism_images').select('*').order('sort_order'),
+                supabase.from('tourism_cultural_plan').select('*').eq('id', 1).single(),
+                supabase.from('spes_beneficiaries').select('*').order('id'),
+                supabase.from('peso_images').select('*').order('sort_order'),
+                supabase.from('gallery_images').select('*, gallery_pages(page_number)').order('sort_order'),
+                supabase.from('about_content').select('*').eq('id', 1).single(),
+                supabase.from('transparency_cards').select('*').order('sort_order'),
+                supabase.from('disclosure_categories').select('*').order('sort_order'),
+                supabase.from('disclosure_years').select('*').order('sort_order'),
+                supabase.from('download_forms').select('*').order('sort_order'),
+                supabase.from('users').select('*')
+            ]);
+
+            siteData = {
+                site: settings || { logo: '', name: 'Municipality of Tobias Fornier' },
+                hero: { slides: (heroSlides || []).map(s => s.image_url) },
+                newsCategories: (() => {
+                    const map = {};
+                    (newsItems || []).forEach(item => {
+                        const catName = item.news_categories?.name;
+                        if (!catName) return;
+                        if (!map[catName]) map[catName] = [];
+                        map[catName].push({
+                            title: item.title,
+                            subtitle: item.subtitle,
+                            desc: item.description,
+                            author: item.author,
+                            readTime: item.read_time,
+                            timestamp: item.timestamp,
+                            link: item.link,
+                            image: item.image_url,
+                            videoSrc: item.video_src,
+                            duration: item.duration
+                        });
+                    });
+                    return map;
+                })(),
+                officials: (officials || []).map(o => ({ name: o.name, position: o.position, image: o.image_url })),
+                municipalProfile: {
+                    bannerImage: settings?.logo || '',
+                    sections: (profileSections || []).map(s => ({ heading: s.heading, content: s.content, image: s.image_url }))
+                },
+                lguOffices: (lguOffices || []).map(o => ({ icon: o.icon, name: o.name, services: o.services })),
+                liga: {
+                    punong: (ligaPunong || []).map(p => ({ barangay: p.barangay, name: p.name })),
+                    sk: (ligaSk || []).map(s => ({ barangay: s.barangay, name: s.name }))
+                },
+                tourism: (() => {
+                    const section1 = (tourismSections || []).find(s => s.section_key === 'section1') || {};
+                    const section2 = (tourismSections || []).find(s => s.section_key === 'section2') || {};
+                    return {
+                        section1: {
+                            text: section1.text_content || '',
+                            images: (tourismImages || []).filter(img => img.section_key === 'section1').map(img => img.image_url)
+                        },
+                        section2: {
+                            text: section2.text_content || '',
+                            images: (tourismImages || []).filter(img => img.section_key === 'section2').map(img => img.image_url)
+                        },
+                        bulletList: section1.bullet_list || '',
+                        culturalPlanImage: culturalPlan?.image_url || ''
+                    };
+                })(),
+                peso: {
+                    spes: (spesBeneficiaries || []).map(b => ({ name: b.name, address: b.address, years: b.years })),
+                    images: (pesoImages || []).map(img => img.image_url)
+                },
+                gallery: (() => {
+                    const pages = { 1: [], 2: [], 3: [] };
+                    (galleryImages || []).forEach(img => {
+                        const page = img.gallery_pages?.page_number;
+                        if (page) pages[page].push(img.image_url);
+                    });
+                    return pages;
+                })(),
+                about: aboutContent || {},
+                transparency: {
+                    bgImage: settings?.colors?.bgImage || '',
+                    paragraph: aboutContent?.paragraph || '',
+                    cards: (transparencyCards || []).map(c => ({ icon: c.icon, title: c.title, desc: c.description, linkText: c.link_text }))
+                },
+                disclosure: {
+                    categories: (disclosureCategories || []).map(cat => ({
+                        summary: cat.summary,
+                        years: (disclosureYears || []).filter(y => y.category_id === cat.id).map(y => y.year_label)
+                    }))
+                },
+                download: (downloadForms || []).map(f => ({ icon: f.icon, title: f.title, desc: f.description, link: f.link })),
+                users: users || [],
+                social: settings?.social_links || [],
+                footer: settings?.footer_data || {},
+                colors: settings?.colors || {}
+            };
+        } catch (error) {
+            console.error('Error loading data:', error);
+            const errorContainer = document.getElementById('error-container');
+            if (errorContainer) {
+                errorContainer.textContent = 'Failed to load data from Supabase. Using fallback defaults.';
+                errorContainer.classList.add('visible');
+            }
+            siteData = {
+                site: { logo: '', name: 'Municipality of Tobias Fornier' },
+                hero: { slides: [] },
+                newsCategories: {},
+                officials: [],
+                municipalProfile: { bannerImage: '', sections: [] },
+                lguOffices: [],
+                liga: { punong: [], sk: [] },
+                tourism: { section1: { text: '', images: [] }, section2: { text: '', images: [] }, bulletList: '', culturalPlanImage: '' },
+                peso: { spes: [], images: [] },
+                gallery: { 1: [], 2: [], 3: [] },
+                about: {},
+                transparency: { bgImage: '', paragraph: '', cards: [] },
+                disclosure: { categories: [] },
+                download: [],
+                users: [],
+                social: [],
+                footer: {},
+                colors: {}
+            };
+        } finally {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+    }
+
+    // ========== RENDER FUNCTIONS (full implementations from original admin.js) ==========
 
     // ---------- Site Header Panel ----------
     function renderSiteHeader() {
         const container = document.getElementById('subsection-site-header');
+        if (!container) return;
         container.innerHTML = `
             <h3 class="text-xl font-semibold text-[#2e5fa7] mb-4">Site Header Panel</h3>
             <div class="grid gap-6">
                 <div><label class="block font-semibold mb-2">Site Logo</label>
                     <div class="flex items-center gap-4">
-                        <img id="logoPreview" src="${savedData.site?.logo || 'https://via.placeholder.com/80?text=Logo'}" class="w-20 h-20 object-contain border rounded-lg">
+                        <img id="logoPreview" src="${siteData.site.logo || 'https://via.placeholder.com/80?text=Logo'}" class="w-20 h-20 object-contain border rounded-lg">
                         <input type="file" id="logoUpload" accept="image/*" class="block w-full text-sm">
                     </div>
                 </div>
                 <div><label class="block font-semibold mb-2">Site Name</label>
-                    <input type="text" id="siteName" value="${savedData.site?.name || 'Municipality of Tobias Fornier'}" class="w-full border rounded-lg px-4 py-2">
+                    <input type="text" id="siteName" value="${siteData.site.name}" class="w-full border rounded-lg px-4 py-2">
                 </div>
             </div>
             <div class="mt-8 border-t pt-6">
@@ -149,12 +324,10 @@
                 <button type="button" id="addSocialIcon" class="text-[#2e5fa7] text-sm"><i class="fas fa-plus-circle"></i> Add Icon</button>
             </div>
         `;
-        // Load social icons
         const socialContainer = document.getElementById('social-icons-container');
-        const socialIcons = savedData.social || [{ icon: 'facebook-f', url: '#' }, { icon: 'twitter', url: '#' }, { icon: 'instagram', url: '#' }];
+        const socialIcons = siteData.social || [{ icon: 'facebook-f', url: '#' }];
         socialIcons.forEach(item => addSocialIconRow(item.icon, item.url));
         document.getElementById('addSocialIcon').addEventListener('click', () => addSocialIconRow('facebook-f', '#'));
-        // Logo upload
         document.getElementById('logoUpload').addEventListener('change', async function(e) {
             if (e.target.files[0]) {
                 const compressed = await compressImage(e.target.files[0]);
@@ -183,17 +356,18 @@
     // ---------- Hero Section ----------
     function renderHero() {
         const container = document.getElementById('subsection-hero');
+        if (!container) return;
         container.innerHTML = `
             <h3 class="text-xl font-semibold text-[#2e5fa7] mb-4">Hero Section</h3>
             <div id="heroSlidesContainer" class="space-y-4"></div>
             <button type="button" id="addSlide" class="text-[#2e5fa7] text-sm"><i class="fas fa-plus-circle"></i> Add Slide</button>
         `;
-        const slides = savedData.hero?.slides || [
-            "https://images.unsplash.com/photo-1508873696983-2dfd5898f08b?w=200&q=80",
-            "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=200&q=80",
-            "https://images.unsplash.com/photo-1564419320467-68788cdc6d7c?w=200&q=80"
-        ];
         const slidesContainer = document.getElementById('heroSlidesContainer');
+        const slides = siteData.hero.slides.length ? siteData.hero.slides : [
+            'https://images.unsplash.com/photo-1508873696983-2dfd5898f08b?w=200&q=80',
+            'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=200&q=80',
+            'https://images.unsplash.com/photo-1564419320467-68788cdc6d7c?w=200&q=80'
+        ];
         slides.forEach(src => addHeroSlide(src));
         document.getElementById('addSlide').addEventListener('click', () => addHeroSlide());
     }
@@ -220,7 +394,8 @@
     // ---------- Footer Settings ----------
     function renderFooter() {
         const container = document.getElementById('subsection-footer');
-        const footerData = savedData.footer || {
+        if (!container) return;
+        const footerData = siteData.footer || {
             addressLine1: 'Poblacion, Tobias Fornier, Antique',
             addressLine2: 'Philippines 5716',
             email: 'tobiasfornier@gmail.com',
@@ -267,17 +442,14 @@
             </div>
         `;
 
-        // Quick Links
         const linksContainer = document.getElementById('quickLinksContainer');
         (footerData.quickLinks || []).forEach(link => addQuickLinkRow(link.text, link.url));
         document.getElementById('addQuickLink').addEventListener('click', () => addQuickLinkRow('', ''));
 
-        // Hotlines
         const hotlinesContainer = document.getElementById('hotlinesContainer');
         (footerData.hotlines || []).forEach(h => addHotlineRow(h.name, h.number));
         document.getElementById('addHotline').addEventListener('click', () => addHotlineRow('', ''));
 
-        // Agencies
         const agenciesContainer = document.getElementById('agenciesContainer');
         (footerData.agencies || []).forEach(a => addAgencyRow(a.name, a.image, a.label));
         document.getElementById('addAgency').addEventListener('click', () => addAgencyRow('', '', ''));
@@ -337,13 +509,15 @@
 
     // ---------- Color Adjustment ----------
     function renderColor() {
-        const colors = savedData.colors || {
+        const colors = siteData.colors || {
             primary: '#2e5fa7',
             secondary: '#16a34a',
             backgroundLight: '#f3f4f6',
             textDark: '#111827'
         };
-        document.getElementById('subsection-color').innerHTML = `
+        const container = document.getElementById('subsection-color');
+        if (!container) return;
+        container.innerHTML = `
             <h3 class="text-xl font-semibold text-[#2e5fa7] mb-4">Webpage Color Adjustment</h3>
             <p class="text-sm text-gray-500 mb-4">These settings will be applied site-wide.</p>
             <div class="grid gap-5 sm:grid-cols-2">
@@ -363,12 +537,166 @@
         `;
     }
 
-    // ========== KEY OFFICIALS EDITOR ==========
+    // ---------- System Settings ----------
+    function renderSystem() {
+        document.getElementById('maintenanceMode').value = siteData.system?.maintenance || 'off';
+        document.getElementById('defaultLang').value = siteData.system?.lang || 'en';
+
+        const usersList = document.getElementById('usersList');
+        usersList.innerHTML = '';
+        const users = siteData.users || [
+            { username: 'Admin', email: 'admin@example.com', role: 'Administrator', password: 'admin123', status: 'Active' }
+        ];
+        users.forEach(user => addUserRow(user));
+    }
+
+    function addUserRow(user) {
+        const tbody = document.getElementById('usersList');
+        const row = document.createElement('tr');
+        row.className = 'border-b hover:bg-gray-50';
+        row.dataset.userId = user.id || user.email;
+        row.dataset.user = JSON.stringify(user);
+
+        row.innerHTML = `
+            <td class="px-3 py-2">${escapeHtml(user.username || '')}</td>
+            <td class="px-3 py-2">${escapeHtml(user.email)}</td>
+            <td class="px-3 py-2">${escapeHtml(user.role)}</td>
+            <td class="px-3 py-2">${escapeHtml(user.status)}</td>
+            <td class="px-3 py-2">
+                <button class="edit-user text-blue-600 hover:text-blue-800 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="delete-user text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+
+        row.querySelector('.edit-user').addEventListener('click', () => {
+            const userData = JSON.parse(row.dataset.user);
+            openUserModal(userData);
+        });
+
+        row.querySelector('.delete-user').addEventListener('click', () => {
+            if (confirm('Delete this user?')) row.remove();
+        });
+
+        tbody.appendChild(row);
+    }
+
+    // ---------- User Modal ----------
+    const modal = document.getElementById('userModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalUsername = document.getElementById('modalUsername');
+    const modalEmail = document.getElementById('modalEmail');
+    const modalRole = document.getElementById('modalRole');
+    const modalPassword = document.getElementById('modalPassword');
+    const modalStatus = document.getElementById('modalStatus');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalSave = document.getElementById('modalSave');
+
+    let editingUserId = null;
+
+    function openUserModal(user = null) {
+        modal.classList.remove('hidden');
+        if (user) {
+            modalTitle.textContent = 'Edit User';
+            modalUsername.value = user.username || '';
+            modalEmail.value = user.email || '';
+            modalRole.value = user.role || 'Editor';
+            modalPassword.value = user.password || '';
+            modalStatus.value = user.status || 'Active';
+            editingUserId = user.id || user.email;
+        } else {
+            modalTitle.textContent = 'Add User';
+            modalUsername.value = '';
+            modalEmail.value = '';
+            modalRole.value = 'Editor';
+            modalPassword.value = '';
+            modalStatus.value = 'Active';
+            editingUserId = null;
+        }
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    modalCancel.addEventListener('click', closeModal);
+    modalSave.addEventListener('click', () => {
+        const username = modalUsername.value.trim();
+        const email = modalEmail.value.trim();
+        const role = modalRole.value;
+        const password = modalPassword.value;
+        const status = modalStatus.value;
+
+        if (!username || !email) {
+            alert('Username and email are required.');
+            return;
+        }
+
+        const newUser = {
+            id: editingUserId || Date.now().toString(),
+            username,
+            email,
+            role,
+            password,
+            status
+        };
+
+        if (editingUserId) {
+            const existingRow = document.querySelector(`#usersList tr[data-user-id="${editingUserId}"]`);
+            if (existingRow) {
+                existingRow.dataset.user = JSON.stringify(newUser);
+                existingRow.innerHTML = `
+                    <td class="px-3 py-2">${escapeHtml(username)}</td>
+                    <td class="px-3 py-2">${escapeHtml(email)}</td>
+                    <td class="px-3 py-2">${escapeHtml(role)}</td>
+                    <td class="px-3 py-2">${escapeHtml(status)}</td>
+                    <td class="px-3 py-2">
+                        <button class="edit-user text-blue-600 hover:text-blue-800 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="delete-user text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                existingRow.querySelector('.edit-user').addEventListener('click', () => openUserModal(newUser));
+                existingRow.querySelector('.delete-user').addEventListener('click', () => {
+                    if (confirm('Delete this user?')) existingRow.remove();
+                });
+            }
+        } else {
+            const tbody = document.getElementById('usersList');
+            const row = document.createElement('tr');
+            row.className = 'border-b hover:bg-gray-50';
+            row.dataset.userId = newUser.id;
+            row.dataset.user = JSON.stringify(newUser);
+            row.innerHTML = `
+                <td class="px-3 py-2">${escapeHtml(username)}</td>
+                <td class="px-3 py-2">${escapeHtml(email)}</td>
+                <td class="px-3 py-2">${escapeHtml(role)}</td>
+                <td class="px-3 py-2">${escapeHtml(status)}</td>
+                <td class="px-3 py-2">
+                    <button class="edit-user text-blue-600 hover:text-blue-800 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="delete-user text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            row.querySelector('.edit-user').addEventListener('click', () => openUserModal(newUser));
+            row.querySelector('.delete-user').addEventListener('click', () => {
+                if (confirm('Delete this user?')) row.remove();
+            });
+            tbody.appendChild(row);
+        }
+
+        closeModal();
+    });
+
+    document.getElementById('addUserBtn').addEventListener('click', () => openUserModal());
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // ---------- Key Officials Editor ----------
     const officialsGrid = document.getElementById('officialsGrid');
 
     function renderOfficials() {
         officialsGrid.innerHTML = '';
-        const officials = savedData.officials || [
+        const officials = siteData.officials || [
             { name: "Hon. Ernesto O. Tajanlangit II", position: "Municipal Mayor", image: "" },
             { name: "Hon. Jose Maria A. Fornier", position: "Municipal Vice Mayor", image: "" },
             { name: "Hon. Rene Magdaong", position: "Councilor, SANGGUNIANG BAYAN", image: "" },
@@ -402,7 +730,6 @@
             <input type="text" placeholder="Position / Title" value="${position}" class="official-position-input w-full border rounded px-3 py-2 text-sm">
         `;
 
-        // Image upload logic
         const preview = card.querySelector('.official-image-preview');
         const fileInput = card.querySelector('.official-image-upload');
         const changeBtn = card.querySelector('.change-official-image');
@@ -414,7 +741,6 @@
             }
         });
 
-        // Remove button
         card.querySelector('.remove-official').addEventListener('click', (e) => {
             e.stopPropagation();
             card.remove();
@@ -427,12 +753,11 @@
         addOfficialCard('New Official', 'Position', '');
     });
 
-    // ========== MUNICIPAL PROFILE EDITOR ==========
+    // ---------- Municipal Profile Editor ----------
     const profileBannerPreview = document.getElementById('profileBannerPreview');
     const profileBannerUpload = document.getElementById('profileBannerUpload');
     const removeBannerBtn = document.getElementById('removeBannerBtn');
     const profileSectionsContainer = document.getElementById('profileSectionsContainer');
-    const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
     removeBannerBtn.addEventListener('click', function() {
         profileBannerPreview.src = TRANSPARENT_PIXEL;
@@ -459,11 +784,11 @@
     }
 
     function renderMunicipalProfile() {
-        if (savedData.municipalProfile?.bannerImage) {
-            profileBannerPreview.src = savedData.municipalProfile.bannerImage;
+        if (siteData.municipalProfile?.bannerImage) {
+            profileBannerPreview.src = siteData.municipalProfile.bannerImage;
         }
         profileSectionsContainer.innerHTML = '';
-        const sections = savedData.municipalProfile?.sections || getDefaultProfileSections();
+        const sections = siteData.municipalProfile?.sections || getDefaultProfileSections();
         sections.forEach(section => addProfileSection(section.heading, section.content, section.image));
     }
 
@@ -489,7 +814,6 @@
             </div>
         `;
 
-        // Image upload logic
         const preview = sectionDiv.querySelector('.section-image-preview');
         const fileInput = sectionDiv.querySelector('.section-image-upload');
         const changeBtn = sectionDiv.querySelector('.change-section-image');
@@ -503,13 +827,11 @@
             }
         });
 
-        // Remove image button
         removeImageBtn.addEventListener('click', () => {
             preview.src = TRANSPARENT_PIXEL;
             fileInput.value = '';
         });
 
-        // Remove entire section
         sectionDiv.querySelector('.remove-section').addEventListener('click', () => {
             if (confirm('Remove this section?')) sectionDiv.remove();
         });
@@ -528,270 +850,7 @@
         addProfileSection('', '<p>New section content</p>', '');
     });
 
-    // ========== NEWS & UPDATES ==========
-    const defaultNewsCategories = [
-        { name: "🏀 Municipal Announcement & News Updates", type: "article" },
-        { name: "✨ Municipal Agriculture Featured Stories", type: "article" },
-        { name: "📰 Provincial Health Latest Articles", type: "article" },
-        { name: "🎥 Video News Highlights", type: "video" },
-        { name: "📸 Municipality Gallery", type: "gallery" },
-        { name: "🏀 Inter Barangay Basketball News", type: "article" }
-    ];
-
-    const defaultItems = {
-        "🏀 Municipal Announcement & News Updates": [
-            { title: "OLYMPICS 2024", subtitle: "Team Philippines gears up for Paris 2024", desc: "Athletes from Tobias Fornier join national pool...", author: "", readTime: "5 min read", timestamp: "2 hours ago", image: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&q=80", link: "#" },
-            { title: "TAEKWONDO", subtitle: "Local jin wins gold in national qualifiers", desc: "", author: "", readTime: "3 min read", timestamp: "", image: "https://images.unsplash.com/photo-1555597673-b21d5c935865?w=200&q=80", link: "#" }
-        ],
-        "✨ Municipal Agriculture Featured Stories": [
-            { title: "BASKETBALL", subtitle: "Mayor's Cup tips off · 16 teams battle", desc: "", author: "M. Santos", readTime: "", timestamp: "", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&q=80", link: "#" },
-            { title: "SWIMMING", subtitle: "New pool complex opens", desc: "", author: "L. Gomez", readTime: "", timestamp: "", image: "https://images.unsplash.com/photo-1560089423-ba8d496b20f3?w=200&q=80", link: "#" }
-        ],
-        "📰 Provincial Health Latest Articles": [
-            { title: "New training facility for athletics", subtitle: "", desc: "", author: "J. Dela Cruz", readTime: "3 min", timestamp: "2h ago", image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=200&q=80", link: "#" },
-            { title: "Wrestling clinic conducted", subtitle: "", desc: "", author: "M. Reyes", readTime: "4 min", timestamp: "5h ago", image: "https://images.unsplash.com/photo-1555597673-b21d5c935865?w=200&q=80", link: "#" },
-            { title: "Health forum", subtitle: "", desc: "", author: "L. Gomez", readTime: "2 min", timestamp: "1d ago", image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=200&q=80", link: "#" }
-        ],
-        "🎥 Video News Highlights": [
-            { title: "BASKETBALL · 12:34", duration: "12:34", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&q=80", videoSrc: "" },
-            { title: "Swim meet recap", duration: "3:45", image: "https://images.unsplash.com/photo-1560089423-ba8d496b20f3?w=200&q=80", videoSrc: "" },
-            { title: "Track & field", duration: "7:20", image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=200&q=80", videoSrc: "" },
-            { title: "Basketball training", duration: "5:10", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&q=80", videoSrc: "" },
-            { title: "Swimming finals", duration: "8:22", image: "https://images.unsplash.com/photo-1560089423-ba8d496b20f3?w=200&q=80", videoSrc: "" },
-            { title: "Athletics day", duration: "11:05", image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=200&q=80", videoSrc: "" }
-        ],
-        "📸 Municipality Gallery": [
-            { image: "https://images.unsplash.com/photo-1468325268561-4025d6d0b9b8?w=200&q=80" },
-            { image: "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=200&q=80" },
-            { image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80" },
-            { image: "https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=200&q=80" },
-            { image: "https://images.unsplash.com/photo-1468325268561-4025d6d0b9b8?w=200&q=80" },
-            { image: "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=200&q=80" }
-        ],
-        "🏀 Inter Barangay Basketball News": [
-            { title: "Barangay league finals set", subtitle: "", desc: "", author: "J. Mendoza", readTime: "", timestamp: "", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&q=80", link: "#" },
-            { title: "3x3 tournament registration", subtitle: "", desc: "", author: "R. Salazar", readTime: "", timestamp: "", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&q=80", link: "#" }
-        ]
-    };
-
-    function createNewsItemElement(categoryName, itemData = {}) {
-        const category = defaultNewsCategories.find(c => c.name === categoryName);
-        const type = category ? category.type : 'article';
-        const div = document.createElement('div');
-        div.className = 'news-item-card';
-        div.dataset.category = categoryName;
-
-        const imageHtml = `
-            <div class="relative">
-                <img class="news-thumb-preview" src="${itemData.image || 'https://via.placeholder.com/120x90?text=No+Image'}">
-                <input type="file" accept="image/*" class="news-image-upload hidden">
-                <button class="change-news-image-btn text-xs bg-gray-200 px-2 py-0.5 rounded mt-1"><i class="fas fa-upload mr-1"></i>change</button>
-            </div>
-        `;
-
-        let fieldsHtml = '', videoControlsHtml = '';
-        if (type === 'gallery') {
-            fieldsHtml = `<div class="flex-1"></div>`;
-        } else if (type === 'video') {
-            fieldsHtml = `
-                <div class="news-item-fields grid grid-cols-1 gap-2 flex-1">
-                    <input type="text" placeholder="Video title (e.g. BASKETBALL · 12:34)" value="${itemData.title || ''}" class="news-title border rounded px-2 py-1 text-sm w-full">
-                    <input type="text" placeholder="Duration (optional, e.g. 12:34)" value="${itemData.duration || ''}" class="news-duration border rounded px-2 py-1 text-sm w-full">
-                </div>
-            `;
-            videoControlsHtml = `
-                <div class="w-full mt-2 video-upload-panel-inline">
-                    <label class="block text-xs font-semibold mb-1"><i class="fas fa-video mr-1"></i>Video source</label>
-                    <input type="file" accept="video/mp4,video/webm" class="video-file-input block w-full text-xs mb-2">
-                    <div class="flex gap-2 items-center">
-                        <input type="url" placeholder="YouTube or direct video URL" value="${itemData.videoSrc || ''}" class="video-url-input flex-1 border rounded px-2 py-1 text-xs">
-                        <button class="set-video-url-btn bg-[#2e5fa7] text-white px-3 py-1 rounded text-xs whitespace-nowrap">Set</button>
-                    </div>
-                    <input type="hidden" class="video-src-hidden" value="${itemData.videoSrc || ''}">
-                    <p class="text-[10px] text-gray-500 mt-1">Last set source will be used.</p>
-                </div>
-            `;
-        } else {
-            fieldsHtml = `
-                <div class="news-item-fields grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
-                    <input type="text" placeholder="Title" value="${itemData.title || ''}" class="news-title border rounded px-2 py-1 text-sm">
-                    <input type="text" placeholder="Subtitle" value="${itemData.subtitle || ''}" class="news-subtitle border rounded px-2 py-1 text-sm">
-                    <textarea placeholder="Description" rows="2" class="news-desc border rounded px-2 py-1 text-sm col-span-2">${itemData.desc || ''}</textarea>
-                    <input type="text" placeholder="Author" value="${itemData.author || ''}" class="news-author border rounded px-2 py-1 text-sm">
-                    <input type="text" placeholder="Read time (e.g. 5 min)" value="${itemData.readTime || ''}" class="news-readtime border rounded px-2 py-1 text-sm">
-                    <input type="text" placeholder="Timestamp (e.g. 2h ago)" value="${itemData.timestamp || ''}" class="news-timestamp border rounded px-2 py-1 text-sm">
-                    <input type="url" placeholder="Link (read more)" value="${itemData.link || '#'}" class="news-link border rounded px-2 py-1 text-sm col-span-2">
-                </div>
-            `;
-        }
-
-        const rightColumn = document.createElement('div');
-        rightColumn.className = 'flex-1';
-        rightColumn.innerHTML = fieldsHtml + (videoControlsHtml || '');
-
-        const removeBtn = document.createElement('div');
-        removeBtn.className = 'flex flex-col items-end gap-1';
-        removeBtn.innerHTML = `
-            <button class="text-red-600 text-sm remove-news-item" title="Remove"><i class="fas fa-trash-alt"></i></button>
-        `;
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'flex gap-4 w-full';
-        wrapper.appendChild(new DOMParser().parseFromString(imageHtml, 'text/html').body.firstChild);
-        wrapper.appendChild(rightColumn);
-        wrapper.appendChild(removeBtn);
-        div.appendChild(wrapper);
-
-        const changeBtn = div.querySelector('.change-news-image-btn');
-        const fileInput = div.querySelector('.news-image-upload');
-        const preview = div.querySelector('.news-thumb-preview');
-        changeBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', async (e) => {
-            if (fileInput.files[0]) {
-                const compressed = await compressImage(fileInput.files[0]);
-                preview.src = compressed;
-            }
-        });
-
-        if (type === 'video') {
-            const videoFileInput = div.querySelector('.video-file-input');
-            const videoUrlInput = div.querySelector('.video-url-input');
-            const setUrlBtn = div.querySelector('.set-video-url-btn');
-            const hiddenSrc = div.querySelector('.video-src-hidden');
-
-            videoFileInput.addEventListener('change', async (e) => {
-                if (videoFileInput.files[0]) {
-                    const dataURL = await fileToDataURL(videoFileInput.files[0]);
-                    hiddenSrc.value = dataURL;
-                    videoUrlInput.value = '';
-                }
-            });
-
-            setUrlBtn.addEventListener('click', () => {
-                const url = videoUrlInput.value.trim();
-                if (url) {
-                    hiddenSrc.value = url;
-                    videoFileInput.value = '';
-                }
-            });
-        }
-
-        div.querySelector('.remove-news-item').addEventListener('click', () => {
-            if (confirm('Remove this item?')) div.remove();
-        });
-
-        return div;
-    }
-
-    function renderNewsCategories(categories, itemsMap) {
-        const tabNav = document.getElementById('newsTabNav');
-        const panelsContainer = document.getElementById('newsPanelsContainer');
-        tabNav.innerHTML = '';
-        panelsContainer.innerHTML = '';
-
-        categories.forEach((cat, index) => {
-            const btn = document.createElement('button');
-            btn.className = `news-tab-btn ${index === 0 ? 'active-tab' : ''}`;
-            btn.textContent = cat.name;
-            btn.dataset.target = `panel-${index}`;
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.news-tab-btn').forEach(b => b.classList.remove('active-tab'));
-                btn.classList.add('active-tab');
-                document.querySelectorAll('.category-panel').forEach(p => p.classList.remove('active-panel'));
-                document.getElementById(`panel-${index}`).classList.add('active-panel');
-            });
-            tabNav.appendChild(btn);
-
-            const panel = document.createElement('div');
-            panel.className = `category-panel ${index === 0 ? 'active-panel' : ''}`;
-            panel.id = `panel-${index}`;
-
-            const headerDiv = document.createElement('div');
-            headerDiv.className = 'flex-between mb-4';
-            headerDiv.innerHTML = `<h3 class="text-xl font-bold text-[#2e5fa7]">${cat.name}</h3>`;
-            panel.appendChild(headerDiv);
-
-            const itemsDiv = document.createElement('div');
-            if (cat.type === 'video') itemsDiv.className = 'video-grid';
-            else if (cat.type === 'gallery') itemsDiv.className = 'gallery-grid';
-            else itemsDiv.className = 'article-list';
-            panel.appendChild(itemsDiv);
-
-            const catItems = itemsMap[cat.name] || [];
-            catItems.forEach(item => {
-                itemsDiv.appendChild(createNewsItemElement(cat.name, item));
-            });
-
-            // Add Item button at bottom right
-            const addBtnDiv = document.createElement('div');
-            addBtnDiv.className = 'flex justify-end mt-4';
-            addBtnDiv.innerHTML = `<button class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full add-news-item-btn"><i class="fas fa-plus-circle mr-1"></i>Add item</button>`;
-            panel.appendChild(addBtnDiv);
-
-            addBtnDiv.querySelector('.add-news-item-btn').addEventListener('click', () => {
-                let newItem = {};
-                if (cat.type === 'gallery') {
-                    newItem = { image: 'https://via.placeholder.com/120x90?text=New+Image' };
-                } else if (cat.type === 'video') {
-                    newItem = { title: 'New video', duration: '', image: 'https://via.placeholder.com/120x90?text=Video', videoSrc: '' };
-                } else {
-                    newItem = { title: 'New', subtitle: '', desc: '', author: '', readTime: '', timestamp: '', image: 'https://via.placeholder.com/120x90?text=New', link: '#' };
-                }
-                itemsDiv.appendChild(createNewsItemElement(cat.name, newItem));
-            });
-
-            panelsContainer.appendChild(panel);
-        });
-    }
-
-    function collectNewsData() {
-        const categories = {};
-        document.querySelectorAll('.category-panel').forEach(panel => {
-            const header = panel.querySelector('h3');
-            if (!header) return;
-            const catName = header.innerText;
-            const items = [];
-            panel.querySelectorAll('.news-item-card').forEach(itemCard => {
-                const type = defaultNewsCategories.find(c => c.name === catName)?.type || 'article';
-                const image = itemCard.querySelector('.news-thumb-preview')?.src || '';
-                if (type === 'gallery') {
-                    items.push({ image });
-                } else if (type === 'video') {
-                    const title = itemCard.querySelector('.news-title')?.value || '';
-                    const duration = itemCard.querySelector('.news-duration')?.value || '';
-                    const videoSrc = itemCard.querySelector('.video-src-hidden')?.value || '';
-                    items.push({ title, duration, image, videoSrc });
-                } else {
-                    const title = itemCard.querySelector('.news-title')?.value || '';
-                    const subtitle = itemCard.querySelector('.news-subtitle')?.value || '';
-                    const desc = itemCard.querySelector('.news-desc')?.value || '';
-                    const author = itemCard.querySelector('.news-author')?.value || '';
-                    const readTime = itemCard.querySelector('.news-readtime')?.value || '';
-                    const timestamp = itemCard.querySelector('.news-timestamp')?.value || '';
-                    const link = itemCard.querySelector('.news-link')?.value || '#';
-                    items.push({ title, subtitle, desc, author, readTime, timestamp, link, image });
-                }
-            });
-            categories[catName] = items;
-        });
-        return categories;
-    }
-
-    function loadNewsData() {
-        const saved = localStorage.getItem('tobiasFornierCMS');
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                if (data.newsCategories && typeof data.newsCategories === 'object') {
-                    renderNewsCategories(defaultNewsCategories, data.newsCategories);
-                    return;
-                }
-            } catch (e) {}
-        }
-        renderNewsCategories(defaultNewsCategories, defaultItems);
-    }
-
-    // ========== LGU OFFICES & SERVICES EDITOR ==========
+    // ---------- LGU Offices Editor ----------
     const lguOfficesContainer = document.getElementById('lguOfficesContainer');
 
     function getDefaultLguOffices() {
@@ -813,7 +872,7 @@
 
     function renderLguOffices() {
         lguOfficesContainer.innerHTML = '';
-        const offices = savedData.lguOffices || getDefaultLguOffices();
+        const offices = siteData.lguOffices || getDefaultLguOffices();
         offices.forEach(office => addLguOfficeCard(office.icon, office.name, office.services));
     }
 
@@ -863,7 +922,7 @@
         addLguOfficeCard('fa-building', 'New Office', ['Service 1', 'Service 2']);
     });
 
-    // ========== LIGA EDITOR ==========
+    // ---------- Liga ng mga Barangay Editor ----------
     const ligaTabPunong = document.getElementById('ligaTabPunong');
     const ligaTabSK = document.getElementById('ligaTabSK');
     const ligaPunongPanel = document.getElementById('ligaPunongPanel');
@@ -872,11 +931,9 @@
     const skList = document.getElementById('skList');
 
     function renderLiga() {
-        const ligaData = savedData.liga || { punong: getDefaultPunong(), sk: getDefaultSK() };
-
+        const ligaData = siteData.liga || { punong: getDefaultPunong(), sk: getDefaultSK() };
         punongList.innerHTML = '';
         ligaData.punong.forEach((item, index) => addLigaRow(punongList, item.barangay, item.name, index, 'punong'));
-
         skList.innerHTML = '';
         ligaData.sk.forEach((item, index) => addLigaRow(skList, item.barangay, item.name, index, 'sk'));
     }
@@ -1000,7 +1057,6 @@
             <button class="text-red-600 remove-liga-row" title="Remove"><i class="fas fa-trash"></i></button>
         `;
         container.appendChild(div);
-
         div.querySelector('.remove-liga-row').addEventListener('click', () => div.remove());
     }
 
@@ -1020,7 +1076,7 @@
     document.getElementById('addPunongBtn').addEventListener('click', () => addLigaRow(punongList, '', ''));
     document.getElementById('addSKBtn').addEventListener('click', () => addLigaRow(skList, '', ''));
 
-    // ========== TOURISM EDITOR ==========
+    // ---------- Tourism Editor ----------
     const section1ImagesDiv = document.getElementById('tourismSection1Images');
     const section2ImagesDiv = document.getElementById('tourismSection2Images');
     const section1Text = document.getElementById('tourismSection1Text');
@@ -1032,7 +1088,7 @@
     const addCulturalPlanBtn = document.getElementById('addCulturalPlanBtn');
 
     function renderTourism() {
-        const tourism = savedData.tourism || {
+        const tourism = siteData.tourism || {
             section1: {
                 text: "<p class='mb-4'><span class='font-bold text-[#2e5fa7]'>Tourism industry in the Philippines</span> is considered as one of the most powerful economic growth engines. Aside from the best experience it could offer to tourists to enjoy the wonders and beauty of nature, it likewise generates revenue and provides job opportunities to locals. Tourism is becoming a productive sector in Tobias Fornier. People in the tourism sector collaborate and work together to promote the different tourist destinations and products in the Municipality. The aim is to win the confidence of tourists and investors and to preserve the antiquity of Daonhon culture and heritage.</p><p class='mb-4'>As one of the 18 municipalities comprising the Province of Antique, located at the southern part of Panay Island, Tobias Fornier is part of the craggy coastline, historical and heritage cluster. Its craggy yet breathtaking coastlines and vast green mountains are potential for eco-tourism development.</p>",
                 images: [
@@ -1102,33 +1158,29 @@
         culturalPlanUpload.click();
     });
 
-    // ========== PESO EDITOR ==========
+    // ---------- PESO Editor ----------
     const spesTableBody = document.getElementById('spesTableBody');
     const pesoImagesContainer = document.getElementById('pesoImagesContainer');
 
     function renderPeso() {
-        const pesoData = savedData.peso || {
+        const pesoData = siteData.peso || {
             spes: getDefaultSpes(),
             images: [
                 "https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=600&q=80",
                 "https://images.unsplash.com/photo-1581092921461-39b21f7b8b3f?w=600&q=80"
             ]
         };
-        // Render SPES table
         spesTableBody.innerHTML = '';
         pesoData.spes.forEach((row, index) => addSpesRow(row.name, row.address, row.years));
 
-        // Render PESO images
         pesoImagesContainer.innerHTML = '';
         pesoData.images.forEach((src, index) => addPesoImage(src, index));
     }
 
     function getDefaultSpes() {
-        // Just a few rows for brevity; full list from original
         return [
             { name: "ABIDAY, APRIL JOY P.", address: "Pob Sur", years: "2016 2017 2018" },
             { name: "ABIDAY, DINO MARTIN S.", address: "Igdurarog", years: "2021" },
-            // ... more rows
         ];
     }
 
@@ -1164,7 +1216,7 @@
 
     document.getElementById('addSpesRowBtn').addEventListener('click', () => addSpesRow());
 
-    // ========== GALLERY EDITOR ==========
+    // ---------- Gallery Editor ----------
     const galleryPageBtns = document.querySelectorAll('.gallery-page-btn');
     const galleryPanels = {
         1: document.getElementById('galleryPage1'),
@@ -1178,7 +1230,7 @@
     };
 
     function renderGallery() {
-        const galleryData = savedData.gallery || {
+        const galleryData = siteData.gallery || {
             1: [
                 "https://images.unsplash.com/photo-1468325268561-4025d6d0b9b8?w=200&q=80",
                 "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=200&q=80",
@@ -1233,7 +1285,6 @@
         card.querySelector('.remove-gallery-image').addEventListener('click', () => card.remove());
     }
 
-    // Page tab switching
     galleryPageBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             galleryPageBtns.forEach(b => b.classList.remove('active'));
@@ -1244,7 +1295,6 @@
         });
     });
 
-    // Add image buttons
     document.querySelectorAll('.add-gallery-image').forEach(btn => {
         btn.addEventListener('click', () => {
             const page = btn.dataset.page;
@@ -1253,12 +1303,12 @@
         });
     });
 
-    // ========== DOWNLOAD FORMS EDITOR ==========
+    // ---------- Download Forms Editor ----------
     const downloadFormsContainer = document.getElementById('downloadFormsContainer');
 
     function renderDownloadForms() {
         downloadFormsContainer.innerHTML = '';
-        const forms = savedData.download || getDefaultDownloadForms();
+        const forms = siteData.download || getDefaultDownloadForms();
         forms.forEach(form => addDownloadFormCard(form.icon, form.title, form.desc, form.link));
     }
 
@@ -1311,192 +1361,194 @@
         addDownloadFormCard('fa-file-pdf', 'New Form', 'Description', '#');
     });
 
-    // ========== SYSTEM SETTINGS & USER MANAGEMENT (with modal) ==========
-    function renderSystem() {
-        document.getElementById('maintenanceMode').value = savedData.system?.maintenance || 'off';
-        document.getElementById('defaultLang').value = savedData.system?.lang || 'en';
+    // ---------- News Categories & Items (full version) ----------
+    const defaultNewsCategories = [
+        { name: "🏀 Municipal Announcement & News Updates", type: "article" },
+        { name: "✨ Municipal Agriculture Featured Stories", type: "article" },
+        { name: "📰 Provincial Health Latest Articles", type: "article" },
+        { name: "🎥 Video News Highlights", type: "video" },
+        { name: "📸 Municipality Gallery", type: "gallery" },
+        { name: "🏀 Inter Barangay Basketball News", type: "article" }
+    ];
 
-        // User table rendering
-        const usersList = document.getElementById('usersList');
-        usersList.innerHTML = '';
+    function createNewsItemElement(categoryName, itemData = {}) {
+        const category = defaultNewsCategories.find(c => c.name === categoryName);
+        const type = category ? category.type : 'article';
+        const div = document.createElement('div');
+        div.className = 'news-item-card';
+        div.dataset.category = categoryName;
 
-        // Migrate old user format if necessary
-        let users = savedData.users || [
-            { username: 'admin', email: 'admin@example.com', role: 'Administrator', password: 'admin123', status: 'Active' },
-            { username: 'editor', email: 'editor@example.com', role: 'Editor', password: 'editor123', status: 'Active' }
-        ];
-
-        // Ensure each user has id
-        users = users.map(u => {
-            if (!u.id) {
-                u.id = u.email || Date.now() + Math.random();
-            }
-            return u;
-        });
-
-        users.forEach(user => addUserRow(user));
-    }
-
-    function addUserRow(user) {
-        const tbody = document.getElementById('usersList');
-        const row = document.createElement('tr');
-        row.className = 'border-b hover:bg-gray-50';
-        row.dataset.userId = user.id;
-
-        // Store full user object (including password) in a data attribute
-        row.dataset.user = JSON.stringify(user);
-
-        row.innerHTML = `
-            <td class="px-3 py-2">${escapeHtml(user.username || '')}</td>
-            <td class="px-3 py-2">${escapeHtml(user.email)}</td>
-            <td class="px-3 py-2">${escapeHtml(user.role)}</td>
-            <td class="px-3 py-2">${escapeHtml(user.status)}</td>
-            <td class="px-3 py-2">
-                <button class="edit-user text-blue-600 hover:text-blue-800 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="delete-user text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
-            </td>
+        const imageHtml = `
+            <div class="relative">
+                <img class="news-thumb-preview" src="${itemData.image || 'https://via.placeholder.com/120x90?text=No+Image'}">
+                <input type="file" accept="image/*" class="news-image-upload hidden">
+                <button class="change-news-image-btn text-xs bg-gray-200 px-2 py-0.5 rounded mt-1"><i class="fas fa-upload mr-1"></i>change</button>
+            </div>
         `;
 
-        // Edit button
-        row.querySelector('.edit-user').addEventListener('click', () => {
-            const userData = JSON.parse(row.dataset.user);
-            openUserModal(userData);
-        });
-
-        // Delete button
-        row.querySelector('.delete-user').addEventListener('click', () => {
-            if (confirm('Delete this user?')) row.remove();
-        });
-
-        tbody.appendChild(row);
-    }
-
-    // Modal controls
-    const modal = document.getElementById('userModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalUsername = document.getElementById('modalUsername');
-    const modalEmail = document.getElementById('modalEmail');
-    const modalRole = document.getElementById('modalRole');
-    const modalPassword = document.getElementById('modalPassword');
-    const modalStatus = document.getElementById('modalStatus');
-    const modalCancel = document.getElementById('modalCancel');
-    const modalSave = document.getElementById('modalSave');
-
-    let editingUserId = null; // null = adding new user
-
-    function openUserModal(user = null) {
-        modal.classList.remove('hidden');
-        if (user) {
-            // Edit mode
-            modalTitle.textContent = 'Edit User';
-            modalUsername.value = user.username || '';
-            modalEmail.value = user.email || '';
-            modalRole.value = user.role || 'Editor';
-            modalPassword.value = user.password || '';
-            modalStatus.value = user.status || 'Active';
-            editingUserId = user.id;
-        } else {
-            // Add mode
-            modalTitle.textContent = 'Add User';
-            modalUsername.value = '';
-            modalEmail.value = '';
-            modalRole.value = 'Editor';
-            modalPassword.value = '';
-            modalStatus.value = 'Active';
-            editingUserId = null;
-        }
-    }
-
-    function closeModal() {
-        modal.classList.add('hidden');
-    }
-
-    modalCancel.addEventListener('click', closeModal);
-    modalSave.addEventListener('click', () => {
-        // Gather data
-        const username = modalUsername.value.trim();
-        const email = modalEmail.value.trim();
-        const role = modalRole.value;
-        const password = modalPassword.value;
-        const status = modalStatus.value;
-
-        if (!username || !email) {
-            alert('Username and email are required.');
-            return;
-        }
-
-        const newUser = {
-            id: editingUserId || Date.now().toString(), // simple id
-            username,
-            email,
-            role,
-            password,
-            status
-        };
-
-        if (editingUserId) {
-            // Update existing row
-            const existingRow = document.querySelector(`#usersList tr[data-user-id="${editingUserId}"]`);
-            if (existingRow) {
-                // Update data attribute
-                existingRow.dataset.user = JSON.stringify(newUser);
-                existingRow.innerHTML = `
-                    <td class="px-3 py-2">${escapeHtml(username)}</td>
-                    <td class="px-3 py-2">${escapeHtml(email)}</td>
-                    <td class="px-3 py-2">${escapeHtml(role)}</td>
-                    <td class="px-3 py-2">${escapeHtml(status)}</td>
-                    <td class="px-3 py-2">
-                        <button class="edit-user text-blue-600 hover:text-blue-800 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button class="delete-user text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
-                    </td>
-                `;
-                // Reattach listeners
-                existingRow.querySelector('.edit-user').addEventListener('click', () => openUserModal(newUser));
-                existingRow.querySelector('.delete-user').addEventListener('click', () => {
-                    if (confirm('Delete this user?')) existingRow.remove();
-                });
-            }
-        } else {
-            // Add new row
-            const tbody = document.getElementById('usersList');
-            const row = document.createElement('tr');
-            row.className = 'border-b hover:bg-gray-50';
-            row.dataset.userId = newUser.id;
-            row.dataset.user = JSON.stringify(newUser);
-            row.innerHTML = `
-                <td class="px-3 py-2">${escapeHtml(username)}</td>
-                <td class="px-3 py-2">${escapeHtml(email)}</td>
-                <td class="px-3 py-2">${escapeHtml(role)}</td>
-                <td class="px-3 py-2">${escapeHtml(status)}</td>
-                <td class="px-3 py-2">
-                    <button class="edit-user text-blue-600 hover:text-blue-800 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="delete-user text-red-600 hover:text-red-800" title="Delete"><i class="fas fa-trash"></i></button>
-                </td>
+        let fieldsHtml = '', videoControlsHtml = '';
+        if (type === 'gallery') {
+            fieldsHtml = `<div class="flex-1"></div>`;
+        } else if (type === 'video') {
+            fieldsHtml = `
+                <div class="news-item-fields grid grid-cols-1 gap-2 flex-1">
+                    <input type="text" placeholder="Video title (e.g. BASKETBALL · 12:34)" value="${itemData.title || ''}" class="news-title border rounded px-2 py-1 text-sm w-full">
+                    <input type="text" placeholder="Duration (optional, e.g. 12:34)" value="${itemData.duration || ''}" class="news-duration border rounded px-2 py-1 text-sm w-full">
+                </div>
             `;
-            row.querySelector('.edit-user').addEventListener('click', () => openUserModal(newUser));
-            row.querySelector('.delete-user').addEventListener('click', () => {
-                if (confirm('Delete this user?')) row.remove();
-            });
-            tbody.appendChild(row);
+            videoControlsHtml = `
+                <div class="w-full mt-2 video-upload-panel-inline">
+                    <label class="block text-xs font-semibold mb-1"><i class="fas fa-video mr-1"></i>Video source</label>
+                    <input type="file" accept="video/mp4,video/webm" class="video-file-input block w-full text-xs mb-2">
+                    <div class="flex gap-2 items-center">
+                        <input type="url" placeholder="YouTube or direct video URL" value="${itemData.videoSrc || ''}" class="video-url-input flex-1 border rounded px-2 py-1 text-xs">
+                        <button class="set-video-url-btn bg-[#2e5fa7] text-white px-3 py-1 rounded text-xs whitespace-nowrap">Set</button>
+                    </div>
+                    <input type="hidden" class="video-src-hidden" value="${itemData.videoSrc || ''}">
+                    <p class="text-[10px] text-gray-500 mt-1">Last set source will be used.</p>
+                </div>
+            `;
+        } else {
+            fieldsHtml = `
+                <div class="news-item-fields grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+                    <input type="text" placeholder="Title" value="${itemData.title || ''}" class="news-title border rounded px-2 py-1 text-sm">
+                    <input type="text" placeholder="Subtitle" value="${itemData.subtitle || ''}" class="news-subtitle border rounded px-2 py-1 text-sm">
+                    <textarea placeholder="Description" rows="2" class="news-desc border rounded px-2 py-1 text-sm col-span-2">${itemData.desc || ''}</textarea>
+                    <input type="text" placeholder="Author" value="${itemData.author || ''}" class="news-author border rounded px-2 py-1 text-sm">
+                    <input type="text" placeholder="Read time (e.g. 5 min)" value="${itemData.readTime || ''}" class="news-readtime border rounded px-2 py-1 text-sm">
+                    <input type="text" placeholder="Timestamp (e.g. 2h ago)" value="${itemData.timestamp || ''}" class="news-timestamp border rounded px-2 py-1 text-sm">
+                    <input type="url" placeholder="Link (read more)" value="${itemData.link || '#'}" class="news-link border rounded px-2 py-1 text-sm col-span-2">
+                </div>
+            `;
         }
 
-        closeModal();
-    });
+        const rightColumn = document.createElement('div');
+        rightColumn.className = 'flex-1';
+        rightColumn.innerHTML = fieldsHtml + (videoControlsHtml || '');
 
-    // Add user button opens modal
-    document.getElementById('addUserBtn').addEventListener('click', () => openUserModal());
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'flex flex-col items-end gap-1';
+        removeBtn.innerHTML = `<button class="text-red-600 text-sm remove-news-item" title="Remove"><i class="fas fa-trash-alt"></i></button>`;
 
-    // Click outside modal to close (optional)
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex gap-4 w-full';
+        wrapper.appendChild(new DOMParser().parseFromString(imageHtml, 'text/html').body.firstChild);
+        wrapper.appendChild(rightColumn);
+        wrapper.appendChild(removeBtn);
+        div.appendChild(wrapper);
 
-    // ========== FULL DISCLOSURE POLICY EDITOR ==========
+        const changeBtn = div.querySelector('.change-news-image-btn');
+        const fileInput = div.querySelector('.news-image-upload');
+        const preview = div.querySelector('.news-thumb-preview');
+        changeBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => {
+            if (fileInput.files[0]) {
+                const compressed = await compressImage(fileInput.files[0]);
+                preview.src = compressed;
+            }
+        });
+
+        if (type === 'video') {
+            const videoFileInput = div.querySelector('.video-file-input');
+            const videoUrlInput = div.querySelector('.video-url-input');
+            const setUrlBtn = div.querySelector('.set-video-url-btn');
+            const hiddenSrc = div.querySelector('.video-src-hidden');
+
+            videoFileInput.addEventListener('change', async (e) => {
+                if (videoFileInput.files[0]) {
+                    // For simplicity, we store as data URL – in save, we'll upload
+                    const reader = new FileReader();
+                    reader.onload = (ev) => hiddenSrc.value = ev.target.result;
+                    reader.readAsDataURL(videoFileInput.files[0]);
+                    videoUrlInput.value = '';
+                }
+            });
+
+            setUrlBtn.addEventListener('click', () => {
+                const url = videoUrlInput.value.trim();
+                if (url) {
+                    hiddenSrc.value = url;
+                    videoFileInput.value = '';
+                }
+            });
+        }
+
+        div.querySelector('.remove-news-item').addEventListener('click', () => {
+            if (confirm('Remove this item?')) div.remove();
+        });
+
+        return div;
+    }
+
+    function renderNewsCategories() {
+        const tabNav = document.getElementById('newsTabNav');
+        const panelsContainer = document.getElementById('newsPanelsContainer');
+        tabNav.innerHTML = '';
+        panelsContainer.innerHTML = '';
+
+        const categories = defaultNewsCategories;
+        const itemsMap = siteData.newsCategories || {};
+
+        categories.forEach((cat, index) => {
+            const btn = document.createElement('button');
+            btn.className = `news-tab-btn ${index === 0 ? 'active-tab' : ''}`;
+            btn.textContent = cat.name;
+            btn.dataset.target = `panel-${index}`;
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.news-tab-btn').forEach(b => b.classList.remove('active-tab'));
+                btn.classList.add('active-tab');
+                document.querySelectorAll('.category-panel').forEach(p => p.classList.remove('active-panel'));
+                document.getElementById(`panel-${index}`).classList.add('active-panel');
+            });
+            tabNav.appendChild(btn);
+
+            const panel = document.createElement('div');
+            panel.className = `category-panel ${index === 0 ? 'active-panel' : ''}`;
+            panel.id = `panel-${index}`;
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'flex-between mb-4';
+            headerDiv.innerHTML = `<h3 class="text-xl font-bold text-[#2e5fa7]">${cat.name}</h3>`;
+            panel.appendChild(headerDiv);
+
+            const itemsDiv = document.createElement('div');
+            if (cat.type === 'video') itemsDiv.className = 'video-grid';
+            else if (cat.type === 'gallery') itemsDiv.className = 'gallery-grid';
+            else itemsDiv.className = 'article-list';
+            panel.appendChild(itemsDiv);
+
+            const catItems = itemsMap[cat.name] || [];
+            catItems.forEach(item => {
+                itemsDiv.appendChild(createNewsItemElement(cat.name, item));
+            });
+
+            const addBtnDiv = document.createElement('div');
+            addBtnDiv.className = 'flex justify-end mt-4';
+            addBtnDiv.innerHTML = `<button class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full add-news-item-btn"><i class="fas fa-plus-circle mr-1"></i>Add item</button>`;
+            panel.appendChild(addBtnDiv);
+
+            addBtnDiv.querySelector('.add-news-item-btn').addEventListener('click', () => {
+                let newItem = {};
+                if (cat.type === 'gallery') {
+                    newItem = { image: 'https://via.placeholder.com/120x90?text=New+Image' };
+                } else if (cat.type === 'video') {
+                    newItem = { title: 'New video', duration: '', image: 'https://via.placeholder.com/120x90?text=Video', videoSrc: '' };
+                } else {
+                    newItem = { title: 'New', subtitle: '', desc: '', author: '', readTime: '', timestamp: '', image: 'https://via.placeholder.com/120x90?text=New', link: '#' };
+                }
+                itemsDiv.appendChild(createNewsItemElement(cat.name, newItem));
+            });
+
+            panelsContainer.appendChild(panel);
+        });
+    }
+
+    // ---------- Full Disclosure Editor ----------
     const disclosureContainer = document.getElementById('disclosureCategoriesContainer');
 
     function renderDisclosure() {
         disclosureContainer.innerHTML = '';
-        const categories = savedData.disclosure?.categories || [
+        const categories = siteData.disclosure?.categories || [
             { summary: "Annual Budget", years: ["FY 2022", "FY 2021", "FY 2020", "FY 2019"] },
             { summary: "Annual Procurement Plan", years: ["FY 2022", "FY 2021", "FY 2020", "FY 2019"] },
             { summary: "Statement of Receipts and Expenditures", years: ["FY 2022", "FY 2021", "FY 2020", "FY 2019"] },
@@ -1554,12 +1606,12 @@
         addDisclosureCategory('New Category', []);
     });
 
-    // ========== TRANSPARENCY CARD EDITOR ==========
+    // ---------- Transparency Cards Editor ----------
     const transparencyCardsContainer = document.getElementById('transparencyCardsContainer');
 
     function renderTransparencyCards() {
         transparencyCardsContainer.innerHTML = '';
-        const cards = savedData.transparency?.cards || [
+        const cards = siteData.transparency?.cards || [
             { icon: 'fa-file-invoice-dollar', title: 'Financial Reports', desc: 'FY 2024 Appropriations, Supplemental Budgets, and Financial Reports.', linkText: 'View Reports' },
             { icon: 'fa-hand-holding-heart', title: 'Bids & Awards', desc: 'Invitations to Bid, Notice of Awards, and BAC Resolutions.', linkText: 'View Projects' },
             { icon: 'fa-users', title: 'Sanggunian', desc: 'Ordinances, Resolutions, and Committee Reports – fully accessible.', linkText: 'Legislative' }
@@ -1586,255 +1638,522 @@
         transparencyCardsContainer.appendChild(cardDiv);
     }
 
-    // ========== COLLECT ALL DATA ==========
-    function collectData() {
-        // Site header
-        const site = {
-            logo: document.getElementById('logoPreview')?.src || '',
-            name: document.getElementById('siteName')?.value || ''
-        };
-        // Social icons
-        const social = [];
-        document.querySelectorAll('#social-icons-container .repeatable-item').forEach(item => {
-            const select = item.querySelector('select');
-            const url = item.querySelector('input[type="url"]')?.value || '';
-            social.push({ icon: select?.value || 'facebook-f', url });
-        });
-        // Hero slides
-        const heroSlides = [];
-        document.querySelectorAll('#heroSlidesContainer .slide-item .slide-preview').forEach(img => heroSlides.push(img.src));
-        // Footer
-        const footer = {
-            addressLine1: document.getElementById('footerAddressLine1')?.value || '',
-            addressLine2: document.getElementById('footerAddressLine2')?.value || '',
-            email: document.getElementById('footerEmail')?.value || '',
-            phone: document.getElementById('footerPhone')?.value || '',
-            quickLinks: [],
-            hotlines: [],
-            agencies: []
-        };
-        document.querySelectorAll('#quickLinksContainer > div').forEach(div => {
-            const inputs = div.querySelectorAll('input');
-            if (inputs.length >= 2) footer.quickLinks.push({ text: inputs[0].value, url: inputs[1].value });
-        });
-        document.querySelectorAll('#hotlinesContainer > div').forEach(div => {
-            const inputs = div.querySelectorAll('input');
-            if (inputs.length >= 2) footer.hotlines.push({ name: inputs[0].value, number: inputs[1].value });
-        });
-        document.querySelectorAll('#agenciesContainer .agency-item').forEach(div => {
-            const img = div.querySelector('.agency-image')?.src || '';
-            const inputs = div.querySelectorAll('input[type="text"]');
-            const name = inputs[0]?.value || '';
-            const label = inputs[1]?.value || '';
-            footer.agencies.push({ name, image: img, label });
-        });
-        // Colors
-        const colors = {
-            primary: document.getElementById('primaryColor')?.value || '#2e5fa7',
-            secondary: document.getElementById('secondaryColor')?.value || '#16a34a',
-            backgroundLight: document.getElementById('backgroundLight')?.value || '#f3f4f6',
-            textDark: document.getElementById('textDark')?.value || '#111827'
-        };
-        // System
-        const system = {
-            maintenance: document.getElementById('maintenanceMode')?.value || 'off',
-            lang: document.getElementById('defaultLang')?.value || 'en'
-        };
-        // Users - read from data attributes
-        const users = [];
-        document.querySelectorAll('#usersList tr').forEach(row => {
-            if (row.dataset.user) {
-                users.push(JSON.parse(row.dataset.user));
-            }
-        });
-        // News
-        const newsCategories = collectNewsData();
-
-        // Officials
-        const officials = [];
-        document.querySelectorAll('#officialsGrid .official-card').forEach(card => {
-            const name = card.querySelector('.official-name-input')?.value || '';
-            const position = card.querySelector('.official-position-input')?.value || '';
-            const image = card.querySelector('.official-image-preview')?.src || '';
-            officials.push({ name, position, image });
-        });
-
-        // Municipal Profile
-        let bannerImage = profileBannerPreview?.src || '';
-        if (bannerImage === TRANSPARENT_PIXEL) bannerImage = '';
-        const sections = [];
-        document.querySelectorAll('#profileSectionsContainer .profile-section-card').forEach(card => {
-            const heading = card.querySelector('.section-heading')?.value || '';
-            const content = card.querySelector('.section-content')?.value || '';
-            let image = card.querySelector('.section-image-preview')?.src || '';
-            if (image === TRANSPARENT_PIXEL) image = '';
-            sections.push({ heading, content, image });
-        });
-        const municipalProfile = { bannerImage, sections };
-
-        // LGU Offices
-        const lguOffices = [];
-        document.querySelectorAll('#lguOfficesContainer .lgu-office-card').forEach(card => {
-            const icon = card.querySelector('.office-icon-select')?.value || 'fa-building';
-            const name = card.querySelector('.office-name-input')?.value || '';
-            const servicesText = card.querySelector('.office-services-textarea')?.value || '';
-            const services = servicesText.split('\n').map(s => s.trim()).filter(s => s !== '');
-            if (name) lguOffices.push({ icon, name, services });
-        });
-
-        // Liga data
-        const punong = [];
-        document.querySelectorAll('#punongList .liga-item-row').forEach(row => {
-            const barangay = row.querySelector('.liga-barangay-input')?.value.trim() || '';
-            const name = row.querySelector('.liga-name-input')?.value.trim() || '';
-            if (barangay) punong.push({ barangay, name: name || 'vacant' });
-        });
-        const sk = [];
-        document.querySelectorAll('#skList .liga-item-row').forEach(row => {
-            const barangay = row.querySelector('.liga-barangay-input')?.value.trim() || '';
-            const name = row.querySelector('.liga-name-input')?.value.trim() || '';
-            if (barangay) sk.push({ barangay, name: name || 'vacant' });
-        });
-        const liga = { punong, sk };
-
-        // Tourism data
-        const section1Images = [];
-        document.querySelectorAll('#tourismSection1Images .tourism-image-preview').forEach(img => section1Images.push(img.src));
-        const section2Images = [];
-        document.querySelectorAll('#tourismSection2Images .tourism-image-preview').forEach(img => section2Images.push(img.src));
-        const tourism = {
-            section1: {
-                text: section1Text.value,
-                images: section1Images
-            },
-            section2: {
-                text: section2Text.value,
-                images: section2Images
-            },
-            bulletList: bulletList.value,
-            culturalPlanImage: culturalPlanPreview.src
-        };
-
-        // PESO data
-        const spes = [];
-        document.querySelectorAll('#spesTableBody tr').forEach(row => {
-            const name = row.querySelector('.spes-name')?.value.trim() || '';
-            const address = row.querySelector('.spes-address')?.value.trim() || '';
-            const years = row.querySelector('.spes-years')?.value.trim() || '';
-            if (name) spes.push({ name, address, years });
-        });
-        const pesoImages = [];
-        document.querySelectorAll('#pesoImagesContainer .peso-image-preview').forEach(img => pesoImages.push(img.src));
-        const peso = { spes, images: pesoImages };
-
-        // Gallery data
-        const gallery = {};
-        for (let page = 1; page <= 3; page++) {
-            const images = [];
-            document.querySelectorAll(`#galleryGrid${page} .gallery-image-preview`).forEach(img => images.push(img.src));
-            gallery[page] = images;
+    // ---------- About Editor ----------
+    function renderAbout() {
+        if (siteData.about) {
+            document.getElementById('aboutHeading').value = siteData.about.heading || '';
+            document.getElementById('aboutParagraph').value = siteData.about.paragraph || '';
+            document.getElementById('aboutVision').value = siteData.about.vision || '';
+            document.getElementById('aboutMission').value = siteData.about.mission || '';
+            document.getElementById('aboutHistory').value = siteData.about.history || '';
+            document.getElementById('aboutMapEmbed').value = siteData.about.map_embed_url || '';
+            document.getElementById('aboutMapLink').value = siteData.about.map_link || '';
         }
-
-        // About data
-        const about = {
-            heading: document.getElementById('aboutHeading')?.value || '',
-            paragraph: document.getElementById('aboutParagraph')?.value || '',
-            vision: document.getElementById('aboutVision')?.value || '',
-            mission: document.getElementById('aboutMission')?.value || '',
-            history: document.getElementById('aboutHistory')?.value || '',
-            mapEmbed: document.getElementById('aboutMapEmbed')?.value || '',
-            mapLink: document.getElementById('aboutMapLink')?.value || ''
-        };
-
-        // Transparency data
-        const transparencyCards = [];
-        document.querySelectorAll('#transparencyCardsContainer .transparency-card-editor').forEach(card => {
-            const icon = card.querySelector('.card-icon-select')?.value || 'fa-file-invoice-dollar';
-            const title = card.querySelector('.card-title')?.value.trim() || '';
-            const desc = card.querySelector('.card-desc')?.value.trim() || '';
-            const linkText = card.querySelector('.card-link-text')?.value.trim() || '';
-            if (title) transparencyCards.push({ icon, title, desc, linkText });
-        });
-        const transparency = {
-            bgImage: document.getElementById('transparencyBgImage')?.value || '',
-            paragraph: document.getElementById('transparencyParagraph')?.value || '',
-            cards: transparencyCards
-        };
-
-        // Disclosure data
-        const disclosureCategories = [];
-        document.querySelectorAll('#disclosureCategoriesContainer .disclosure-category-card').forEach(card => {
-            const summary = card.querySelector('.summary-input')?.value.trim() || '';
-            const years = [];
-            card.querySelectorAll('.year-item-wrapper input').forEach(inp => {
-                const val = inp.value.trim();
-                if (val) years.push(val);
-            });
-            if (summary) disclosureCategories.push({ summary, years });
-        });
-        const disclosure = { categories: disclosureCategories };
-
-        // Download forms
-        const download = [];
-        document.querySelectorAll('#downloadFormsContainer > div').forEach(card => {
-            const icon = card.querySelector('.form-icon-select')?.value || 'fa-file-pdf';
-            const title = card.querySelector('.form-title')?.value || '';
-            const desc = card.querySelector('.form-desc')?.value || '';
-            const link = card.querySelector('.form-link')?.value || '#';
-            if (title) download.push({ icon, title, desc, link });
-        });
-
-        return { site, social, hero: { slides: heroSlides }, footer, colors, system, users, newsCategories, officials, municipalProfile, lguOffices, liga, tourism, peso, gallery, about, transparency, disclosure, download };
     }
 
-    // ---------- Save ----------
-    document.getElementById('saveSettings').addEventListener('click', function() {
+    // ========== SAVE ALL DATA TO SUPABASE ==========
+    async function saveAllData() {
+        const saveBtn = document.getElementById('saveSettings');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
         try {
-            const newData = collectData();
-            localStorage.setItem('tobiasFornierCMS', JSON.stringify(newData));
-            alert('All settings saved!');
-        } catch (err) {
-            alert('Save error: ' + err.message);
+            // ---------- 1. Site Settings ----------
+            const logoPreview = document.getElementById('logoPreview');
+            let logoUrl = siteData.site.logo;
+            const logoUpload = document.getElementById('logoUpload');
+            if (logoUpload.files.length > 0) {
+                const compressedFile = await compressImage(logoUpload.files[0]);
+                logoUrl = await uploadImage(compressedFile, 'site');
+            }
+
+            const socialLinks = [];
+            document.querySelectorAll('#social-icons-container .repeatable-item').forEach(item => {
+                const select = item.querySelector('select');
+                const url = item.querySelector('input[type="url"]')?.value || '';
+                socialLinks.push({ icon: select?.value || 'facebook-f', url });
+            });
+
+            const footerData = {
+                addressLine1: document.getElementById('footerAddressLine1')?.value || '',
+                addressLine2: document.getElementById('footerAddressLine2')?.value || '',
+                email: document.getElementById('footerEmail')?.value || '',
+                phone: document.getElementById('footerPhone')?.value || '',
+                quickLinks: [],
+                hotlines: [],
+                agencies: []
+            };
+            document.querySelectorAll('#quickLinksContainer > div').forEach(div => {
+                const inputs = div.querySelectorAll('input');
+                if (inputs.length >= 2) footerData.quickLinks.push({ text: inputs[0].value, url: inputs[1].value });
+            });
+            document.querySelectorAll('#hotlinesContainer > div').forEach(div => {
+                const inputs = div.querySelectorAll('input');
+                if (inputs.length >= 2) footerData.hotlines.push({ name: inputs[0].value, number: inputs[1].value });
+            });
+            document.querySelectorAll('#agenciesContainer .agency-item').forEach(div => {
+                const img = div.querySelector('.agency-image')?.src || '';
+                const inputs = div.querySelectorAll('input[type="text"]');
+                const name = inputs[0]?.value || '';
+                const label = inputs[1]?.value || '';
+                footerData.agencies.push({ name, image: img, label });
+            });
+
+            const colors = {
+                primary: document.getElementById('primaryColor')?.value || '#2e5fa7',
+                secondary: document.getElementById('secondaryColor')?.value || '#16a34a',
+                backgroundLight: document.getElementById('backgroundLight')?.value || '#f3f4f6',
+                textDark: document.getElementById('textDark')?.value || '#111827'
+            };
+
+            const { error: siteError } = await supabase
+                .from('site_settings')
+                .upsert({
+                    id: 1,
+                    logo_url: logoUrl,
+                    site_name: document.getElementById('siteName')?.value || '',
+                    social_links: socialLinks,
+                    footer_data: footerData,
+                    colors: colors
+                });
+            if (siteError) throw siteError;
+
+            // ---------- 2. Hero Slides ----------
+            await supabase.from('hero_slides').delete().neq('id', 0);
+            const heroSlides = [];
+            const slidePreviews = document.querySelectorAll('#heroSlidesContainer .slide-item .slide-preview');
+            for (let i = 0; i < slidePreviews.length; i++) {
+                const img = slidePreviews[i];
+                let src = img.src;
+                if (src.startsWith('data:')) {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const file = new File([blob], `slide_${i}.jpg`, { type: 'image/jpeg' });
+                    src = await uploadImage(file, 'hero');
+                }
+                heroSlides.push({ image_url: src, sort_order: i });
+            }
+            if (heroSlides.length) {
+                const { error: heroError } = await supabase.from('hero_slides').insert(heroSlides);
+                if (heroError) throw heroError;
+            }
+
+            // ---------- 3. News Categories & Items ----------
+            await supabase.from('news_items').delete().neq('id', 0);
+            await supabase.from('news_categories').delete().neq('id', 0);
+
+            const newsData = collectNewsData();
+            for (const [catName, catType] of Object.entries(newsData.categories)) {
+                const { data: cat, error: catErr } = await supabase
+                    .from('news_categories')
+                    .insert({ name: catName, type: catType, sort_order: 0 })
+                    .select()
+                    .single();
+                if (catErr) throw catErr;
+                const items = newsData.items[catName] || [];
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    let imageUrl = item.image;
+                    if (imageUrl && imageUrl.startsWith('data:')) {
+                        const response = await fetch(imageUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], `news_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        imageUrl = await uploadImage(file, 'news');
+                    }
+                    let videoSrc = item.videoSrc;
+                    if (videoSrc && videoSrc.startsWith('data:')) {
+                        // For simplicity, we store video as data URL – but this will be huge. Better to upload to storage.
+                        // In a real app, you'd upload video files to storage as well.
+                        // For now, we keep as data URL – but be aware of size limits.
+                    }
+                    await supabase.from('news_items').insert({
+                        category_id: cat.id,
+                        title: item.title,
+                        subtitle: item.subtitle,
+                        description: item.desc,
+                        author: item.author,
+                        read_time: item.readTime,
+                        timestamp: item.timestamp,
+                        link: item.link,
+                        image_url: imageUrl,
+                        video_src: videoSrc,
+                        duration: item.duration,
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 4. Officials ----------
+            await supabase.from('officials').delete().neq('id', 0);
+            const officialCards = document.querySelectorAll('#officialsGrid .official-card');
+            for (let i = 0; i < officialCards.length; i++) {
+                const card = officialCards[i];
+                const name = card.querySelector('.official-name-input')?.value || '';
+                const position = card.querySelector('.official-position-input')?.value || '';
+                let imageUrl = card.querySelector('.official-image-preview')?.src || '';
+                if (imageUrl.startsWith('data:')) {
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    const file = new File([blob], `official_${i}.jpg`, { type: 'image/jpeg' });
+                    imageUrl = await uploadImage(file, 'officials');
+                }
+                if (name && position) {
+                    await supabase.from('officials').insert({
+                        name,
+                        position,
+                        image_url: imageUrl,
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 5. Municipal Profile Sections ----------
+            await supabase.from('profile_sections').delete().neq('id', 0);
+            const profileSections = document.querySelectorAll('#profileSectionsContainer .profile-section-card');
+            for (let i = 0; i < profileSections.length; i++) {
+                const sec = profileSections[i];
+                const heading = sec.querySelector('.section-heading')?.value || '';
+                const content = sec.querySelector('.section-content')?.value || '';
+                let imageUrl = sec.querySelector('.section-image-preview')?.src || '';
+                if (imageUrl.startsWith('data:')) {
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    const file = new File([blob], `profile_${i}.jpg`, { type: 'image/jpeg' });
+                    imageUrl = await uploadImage(file, 'profile');
+                }
+                await supabase.from('profile_sections').insert({
+                    heading,
+                    content,
+                    image_url: imageUrl,
+                    sort_order: i
+                });
+            }
+
+            // ---------- 6. LGU Offices ----------
+            await supabase.from('lgu_offices').delete().neq('id', 0);
+            const officeCards = document.querySelectorAll('#lguOfficesContainer .lgu-office-card');
+            for (let i = 0; i < officeCards.length; i++) {
+                const card = officeCards[i];
+                const icon = card.querySelector('.office-icon-select')?.value || 'fa-building';
+                const name = card.querySelector('.office-name-input')?.value || '';
+                const servicesText = card.querySelector('.office-services-textarea')?.value || '';
+                const services = servicesText.split('\n').map(s => s.trim()).filter(s => s);
+                if (name) {
+                    await supabase.from('lgu_offices').insert({
+                        icon,
+                        name,
+                        services,
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 7. Liga Punong ----------
+            await supabase.from('liga_punong').delete().neq('id', 0);
+            const punongRows = document.querySelectorAll('#punongList .liga-item-row');
+            for (let i = 0; i < punongRows.length; i++) {
+                const row = punongRows[i];
+                const barangay = row.querySelector('.liga-barangay-input')?.value || '';
+                const name = row.querySelector('.liga-name-input')?.value || '';
+                if (barangay) {
+                    await supabase.from('liga_punong').insert({
+                        barangay,
+                        name: name || 'vacant',
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 8. Liga SK ----------
+            await supabase.from('liga_sk').delete().neq('id', 0);
+            const skRows = document.querySelectorAll('#skList .liga-item-row');
+            for (let i = 0; i < skRows.length; i++) {
+                const row = skRows[i];
+                const barangay = row.querySelector('.liga-barangay-input')?.value || '';
+                const name = row.querySelector('.liga-name-input')?.value || '';
+                if (barangay) {
+                    await supabase.from('liga_sk').insert({
+                        barangay,
+                        name: name || 'vacant',
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 9. Tourism Sections & Images ----------
+            await supabase.from('tourism_sections').delete().neq('id', 0);
+            await supabase.from('tourism_images').delete().neq('id', 0);
+
+            const section1TextVal = document.getElementById('tourismSection1Text')?.value || '';
+            const section2TextVal = document.getElementById('tourismSection2Text')?.value || '';
+            const bulletListVal = document.getElementById('tourismBulletList')?.value || '';
+
+            const { data: sec1 } = await supabase.from('tourism_sections').insert({
+                section_key: 'section1',
+                text_content: section1TextVal,
+                bullet_list: bulletListVal
+            }).select().single();
+
+            const { data: sec2 } = await supabase.from('tourism_sections').insert({
+                section_key: 'section2',
+                text_content: section2TextVal
+            }).select().single();
+
+            const sec1Images = document.querySelectorAll('#tourismSection1Images .tourism-image-preview');
+            for (let i = 0; i < sec1Images.length; i++) {
+                let src = sec1Images[i].src;
+                if (src.startsWith('data:')) {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const file = new File([blob], `tourism1_${i}.jpg`, { type: 'image/jpeg' });
+                    src = await uploadImage(file, 'tourism');
+                }
+                await supabase.from('tourism_images').insert({
+                    section_key: 'section1',
+                    image_url: src,
+                    sort_order: i
+                });
+            }
+
+            const sec2Images = document.querySelectorAll('#tourismSection2Images .tourism-image-preview');
+            for (let i = 0; i < sec2Images.length; i++) {
+                let src = sec2Images[i].src;
+                if (src.startsWith('data:')) {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const file = new File([blob], `tourism2_${i}.jpg`, { type: 'image/jpeg' });
+                    src = await uploadImage(file, 'tourism');
+                }
+                await supabase.from('tourism_images').insert({
+                    section_key: 'section2',
+                    image_url: src,
+                    sort_order: i
+                });
+            }
+
+            let culturalPlanSrc = document.getElementById('culturalPlanPreview')?.src || '';
+            if (culturalPlanSrc.startsWith('data:')) {
+                const response = await fetch(culturalPlanSrc);
+                const blob = await response.blob();
+                const file = new File([blob], 'cultural_plan.jpg', { type: 'image/jpeg' });
+                culturalPlanSrc = await uploadImage(file, 'tourism');
+            }
+            await supabase.from('tourism_cultural_plan').upsert({
+                id: 1,
+                image_url: culturalPlanSrc
+            });
+
+            // ---------- 10. PESO ----------
+            await supabase.from('spes_beneficiaries').delete().neq('id', 0);
+            const spesRows = document.querySelectorAll('#spesTableBody tr');
+            for (let i = 0; i < spesRows.length; i++) {
+                const row = spesRows[i];
+                const name = row.querySelector('.spes-name')?.value || '';
+                const address = row.querySelector('.spes-address')?.value || '';
+                const years = row.querySelector('.spes-years')?.value || '';
+                if (name) {
+                    await supabase.from('spes_beneficiaries').insert({ name, address, years });
+                }
+            }
+
+            await supabase.from('peso_images').delete().neq('id', 0);
+            const pesoImgs = document.querySelectorAll('#pesoImagesContainer .peso-image-preview');
+            for (let i = 0; i < pesoImgs.length; i++) {
+                let src = pesoImgs[i].src;
+                if (src.startsWith('data:')) {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    const file = new File([blob], `peso_${i}.jpg`, { type: 'image/jpeg' });
+                    src = await uploadImage(file, 'peso');
+                }
+                await supabase.from('peso_images').insert({ image_url: src, sort_order: i });
+            }
+
+            // ---------- 11. Gallery ----------
+            await supabase.from('gallery_images').delete().neq('id', 0);
+            for (let page = 1; page <= 3; page++) {
+                const pageId = page;
+                const images = document.querySelectorAll(`#galleryGrid${page} .gallery-image-preview`);
+                for (let i = 0; i < images.length; i++) {
+                    let src = images[i].src;
+                    if (src.startsWith('data:')) {
+                        const response = await fetch(src);
+                        const blob = await response.blob();
+                        const file = new File([blob], `gallery_${page}_${i}.jpg`, { type: 'image/jpeg' });
+                        src = await uploadImage(file, 'gallery');
+                    }
+                    await supabase.from('gallery_images').insert({
+                        page_id: pageId,
+                        image_url: src,
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 12. About Content ----------
+            const about = {
+                heading: document.getElementById('aboutHeading')?.value || '',
+                paragraph: document.getElementById('aboutParagraph')?.value || '',
+                vision: document.getElementById('aboutVision')?.value || '',
+                mission: document.getElementById('aboutMission')?.value || '',
+                history: document.getElementById('aboutHistory')?.value || '',
+                map_embed_url: document.getElementById('aboutMapEmbed')?.value || '',
+                map_link: document.getElementById('aboutMapLink')?.value || ''
+            };
+            await supabase.from('about_content').upsert({ id: 1, ...about });
+
+            // ---------- 13. Transparency Cards ----------
+            await supabase.from('transparency_cards').delete().neq('id', 0);
+            const cardDivs = document.querySelectorAll('#transparencyCardsContainer .transparency-card-editor');
+            for (let i = 0; i < cardDivs.length; i++) {
+                const div = cardDivs[i];
+                const icon = div.querySelector('.card-icon-select')?.value || 'fa-file-invoice-dollar';
+                const title = div.querySelector('.card-title')?.value || '';
+                const desc = div.querySelector('.card-desc')?.value || '';
+                const linkText = div.querySelector('.card-link-text')?.value || '';
+                if (title) {
+                    await supabase.from('transparency_cards').insert({
+                        icon,
+                        title,
+                        description: desc,
+                        link_text: linkText,
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 14. Full Disclosure ----------
+            await supabase.from('disclosure_categories').delete().neq('id', 0);
+            await supabase.from('disclosure_years').delete().neq('id', 0);
+            const catDivs = document.querySelectorAll('#disclosureCategoriesContainer .disclosure-category-card');
+            for (let i = 0; i < catDivs.length; i++) {
+                const div = catDivs[i];
+                const summary = div.querySelector('.summary-input')?.value || '';
+                const { data: cat, error: catErr } = await supabase
+                    .from('disclosure_categories')
+                    .insert({ summary, sort_order: i })
+                    .select()
+                    .single();
+                if (catErr) throw catErr;
+                const yearInputs = div.querySelectorAll('.year-item-wrapper input');
+                for (let j = 0; j < yearInputs.length; j++) {
+                    const year = yearInputs[j].value;
+                    if (year) {
+                        await supabase.from('disclosure_years').insert({
+                            category_id: cat.id,
+                            year_label: year,
+                            sort_order: j
+                        });
+                    }
+                }
+            }
+
+            // ---------- 15. Download Forms ----------
+            await supabase.from('download_forms').delete().neq('id', 0);
+            const formDivs = document.querySelectorAll('#downloadFormsContainer > div');
+            for (let i = 0; i < formDivs.length; i++) {
+                const div = formDivs[i];
+                const icon = div.querySelector('.form-icon-select')?.value || 'fa-file-pdf';
+                const title = div.querySelector('.form-title')?.value || '';
+                const desc = div.querySelector('.form-desc')?.value || '';
+                const link = div.querySelector('.form-link')?.value || '#';
+                if (title) {
+                    await supabase.from('download_forms').insert({
+                        icon,
+                        title,
+                        description: desc,
+                        link,
+                        sort_order: i
+                    });
+                }
+            }
+
+            // ---------- 16. Users ----------
+            // We do not delete users; we upsert based on the UI.
+            const userRows = document.querySelectorAll('#usersList tr');
+            for (const row of userRows) {
+                const user = JSON.parse(row.dataset.user);
+                await supabase.from('users').upsert({
+                    username: user.username,
+                    email: user.email,
+                    password: user.password,
+                    role: user.role,
+                    status: user.status
+                }, { onConflict: 'username' });
+            }
+
+            alert('All changes saved successfully!');
+        } catch (error) {
+            console.error('Save error:', error);
+            alert('Error saving data. Check console for details.');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save All Changes';
         }
+    }
+
+    // Helper to collect news data from UI
+    function collectNewsData() {
+        const categories = {};
+        const items = {};
+        document.querySelectorAll('.category-panel').forEach(panel => {
+            const header = panel.querySelector('h3');
+            if (!header) return;
+            const catName = header.innerText;
+            const cat = defaultNewsCategories.find(c => c.name === catName);
+            const catType = cat ? cat.type : 'article';
+            categories[catName] = catType;
+            items[catName] = [];
+            panel.querySelectorAll('.news-item-card').forEach(card => {
+                const type = catType;
+                const image = card.querySelector('.news-thumb-preview')?.src || '';
+                if (type === 'gallery') {
+                    items[catName].push({ image });
+                } else if (type === 'video') {
+                    const title = card.querySelector('.news-title')?.value || '';
+                    const duration = card.querySelector('.news-duration')?.value || '';
+                    const videoSrc = card.querySelector('.video-src-hidden')?.value || '';
+                    items[catName].push({ title, duration, image, videoSrc });
+                } else {
+                    const title = card.querySelector('.news-title')?.value || '';
+                    const subtitle = card.querySelector('.news-subtitle')?.value || '';
+                    const desc = card.querySelector('.news-desc')?.value || '';
+                    const author = card.querySelector('.news-author')?.value || '';
+                    const readTime = card.querySelector('.news-readtime')?.value || '';
+                    const timestamp = card.querySelector('.news-timestamp')?.value || '';
+                    const link = card.querySelector('.news-link')?.value || '#';
+                    items[catName].push({ title, subtitle, desc, author, readTime, timestamp, link, image });
+                }
+            });
+        });
+        return { categories, items };
+    }
+
+    // ---------- Initialize ----------
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadAllData();
+
+        renderSiteHeader();
+        renderHero();
+        renderFooter();
+        renderColor();
+        renderSystem();
+        renderOfficials();
+        renderMunicipalProfile();
+        renderLguOffices();
+        renderLiga();
+        renderTourism();
+        renderPeso();
+        renderGallery();
+        renderDownloadForms();
+        renderNewsCategories();
+        renderDisclosure();
+        renderTransparencyCards();
+        renderAbout();
+
+        document.getElementById('saveSettings').addEventListener('click', saveAllData);
+
+        // Activate first section
+        document.querySelector('.sidebar-item[data-section="general"]').classList.add('active');
     });
-
-    // ---------- Initialize all ----------
-    renderSiteHeader();
-    renderHero();
-    renderFooter();
-    renderColor();
-    renderSystem();
-    renderOfficials();    
-    renderMunicipalProfile();
-    renderLguOffices();
-    renderLiga();
-    renderTourism();
-    renderPeso();
-    renderGallery();
-    renderDownloadForms();
-    loadNewsData();
-
-    // Load About data into form fields
-    if (savedData.about) {
-        document.getElementById('aboutHeading').value = savedData.about.heading || '';
-        document.getElementById('aboutParagraph').value = savedData.about.paragraph || '';
-        document.getElementById('aboutVision').value = savedData.about.vision || '';
-        document.getElementById('aboutMission').value = savedData.about.mission || '';
-        document.getElementById('aboutHistory').value = savedData.about.history || '';
-        document.getElementById('aboutMapEmbed').value = savedData.about.mapEmbed || '';
-        document.getElementById('aboutMapLink').value = savedData.about.mapLink || '';
-    }
-
-    // Load Transparency data (bg and paragraph)
-    if (savedData.transparency) {
-        document.getElementById('transparencyBgImage').value = savedData.transparency.bgImage || '';
-        document.getElementById('transparencyParagraph').value = savedData.transparency.paragraph || '';
-    }
-
-    // Render Disclosure and Transparency Cards
-    renderDisclosure();
-    renderTransparencyCards();
-
-    // Activate general section by default
-    document.querySelector('.sidebar-item[data-section="general"]').classList.add('active');
 })();
